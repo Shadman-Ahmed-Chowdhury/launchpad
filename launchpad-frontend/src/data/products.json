@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "slug": "flowcraft",
+    "name": "FlowCraft",
+    "tagline": "Visual workflows for small teams",
+    "description": "Turn a messy checklist into a workflow the whole team can see and run, without writing a line of code.",
+    "logo": null,
+    "topics": ["Productivity", "No-Code"],
+    "website_url": "https://example.com/flowcraft",
+    "votes_count": 342,
+    "launch_date": "2026-09-21"
+  },
+  {
+    "id": 2,
+    "slug": "inkwell",
+    "name": "Inkwell",
+    "tagline": "Write your newsletter, not your HTML",
+    "description": "A distraction-free editor for writers who send a newsletter every week and never want to touch a template again.",
+    "logo": null,
+    "topics": ["Writing", "Newsletters"],
+    "website_url": "https://example.com/inkwell",
+    "votes_count": 289,
+    "launch_date": "2026-09-21"
+  },
+  {
+    "id": 3,
+    "slug": "pixelgrid",
+    "name": "Pixelgrid",
+    "tagline": "Design systems that stay in sync with code",
+    "description": "Keep components, tokens, and code in one place, so design and engineering stop drifting apart.",
+    "logo": null,
+    "topics": ["Design", "Developer Tools"],
+    "website_url": "https://example.com/pixelgrid",
+    "votes_count": 231,
+    "launch_date": "2026-09-21"
+  },
+  {
+    "id": 4,
+    "slug": "runbook",
+    "name": "Runbook",
+    "tagline": "Incident response your team will actually read",
+    "description": "Short, versioned runbooks that link straight to the alert that triggered them.",
+    "logo": null,
+    "topics": ["DevOps", "Developer Tools"],
+    "website_url": "https://example.com/runbook",
+    "votes_count": 176,
+    "launch_date": "2026-09-21"
+  },
+  {
+    "id": 5,
+    "slug": "loopnote",
+    "name": "Loopnote",
+    "tagline": "A habit tracker that fits on one screen",
+    "description": "One weekly view, a handful of habits, and nothing else competing for your attention.",
+    "logo": null,
+    "topics": ["Health", "Habits"],
+    "website_url": "https://example.com/loopnote",
+    "votes_count": 98,
+    "launch_date": "2026-09-21"
+  },
+  {
+    "id": 6,
+    "slug": "cargo-forms",
+    "name": "Cargo Forms",
+    "tagline": "Forms that feel like part of your product",
+    "description": "Embed forms that match your brand instead of redirecting people to someone else's page.",
+    "logo": null,
+    "topics": ["No-Code", "Marketing"],
+    "website_url": "https://example.com/cargo-forms",
+    "votes_count": 54,
+    "launch_date": "2026-09-21"
+  }
+]
