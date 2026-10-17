@@ -12,17 +12,20 @@ Table users {
   id int [primary key]
   first_name varchar
   last_name varchar
-  email varchar [unique]
-  password text // null if signed up via Google
-  google_id varchar // null if signed up via email/password
+  email varchar [unique] // case-insensitive (citext) so Foo@x.com and foo@x.com can't both sign up
+  handle varchar [unique] // public profile slug, e.g. /u/amina
+  auth_provider varchar // 'password' or 'google' — exactly one, enforced by a CHECK constraint
+  password_hash text // required if auth_provider='password', else null
+  google_id varchar [unique] // required if auth_provider='google' (Google's sub claim), else null
   avatar varchar // file path/key in S3
   role varchar [default: 'member'] // member/reviewer/admin
-  is_verified bool [default: false]
-  verify_token varchar // nullable, used for email confirmation
+  email_verified_at timestamp // nullable; null = not verified, votes/comments blocked until set
   is_suspended bool [default: false]
   bio varchar // one line, shown on public profile
   created_at timestamp
   updated_at timestamp
+
+  Note: 'CHECK: auth_provider=password requires password_hash and forbids google_id, and vice versa for google.'
 }
 
 Table user_links {
@@ -33,6 +36,17 @@ Table user_links {
   created_at timestamp
 }
 Ref: users.id < user_links.user_id
+
+Table auth_tokens {
+  id int [primary key]
+  user_id int
+  kind varchar // verify_email/reset_password
+  token_hash varchar [unique] // hash of the token emailed to the user; raw token is never stored
+  expires_at timestamp
+  used_at timestamp // nullable, set once consumed so the same link can't be replayed
+  created_at timestamp
+}
+Ref: users.id < auth_tokens.user_id
 
 Table topics {
   id int [primary key]
@@ -93,9 +107,10 @@ Table votes {
   product_id int
   user_id int
   created_at timestamp
+  retracted_at timestamp // nullable; set when they take their vote back instead of deleting the row
 
   indexes {
-    (product_id, user_id) [unique] // one vote per member per product
+    (product_id, user_id) [unique] // partial: only among active votes (retracted_at is null)
   }
 }
 Ref: products.id < votes.product_id
@@ -107,7 +122,7 @@ Table comments {
   user_id int
   parent_comment_id int // nullable, self-ref for replies
   body text
-  is_removed bool [default: false] // soft-delete after a report is upheld
+  deleted_at timestamp // nullable; set after a report is upheld (soft-delete)
   created_at timestamp
   updated_at timestamp
 }
@@ -184,28 +199,46 @@ Table notifications {
   user_id int // recipient
   type varchar // matches notification_type above
   data json // context, e.g. product_id, comment_id
-  is_read bool [default: false]
+  read_at timestamp // nullable; null = unread
   created_at timestamp
 }
 Ref: users.id < notifications.user_id
 
-Table product_daily_rankings {
+Table daily_rankings {
   id int [primary key]
   product_id int
-  topic_id int // nullable, set when the row is for a topic-specific list
-  period_type varchar // daily/weekly/monthly/all_time
-  period_key varchar // e.g. '2026-09-21', '2026-W38', '2026-09'
-  rank int
+  rank_date date // the day being frozen, e.g. '2026-09-21'
+  position int
   score decimal
   votes_count int
-  created_at timestamp // frozen once the period ends, never recalculated
+  frozen_at timestamp // set once at the UTC day boundary, never recalculated after
 
   indexes {
-    (product_id, period_type, period_key, topic_id) [unique]
+    (product_id, rank_date) [unique]
+    (rank_date, position) [unique] // position is unique within a day, never globally
   }
 }
-Ref: products.id < product_daily_rankings.product_id
-Ref: topics.id < product_daily_rankings.topic_id
+Ref: products.id < daily_rankings.product_id
+
+Table period_rankings {
+  id int [primary key]
+  period_type varchar // weekly/monthly/all_time
+  period_start date // week starts Monday, month starts day 1; null only for all_time
+  topic_id int // nullable; null = global board, set = that topic's board
+  product_id int
+  position int
+  score decimal
+  votes_count int
+  through_date date // last completed day included in this board
+  computed_at timestamp // when this board was last rebuilt
+
+  indexes {
+    (period_type, period_start, topic_id, product_id) [unique] // nulls treated as equal, not distinct
+    (period_type, period_start, topic_id, position) [unique]
+  }
+}
+Ref: products.id < period_rankings.product_id
+Ref: topics.id < period_rankings.topic_id
 
 Table audit_logs {
   id int [primary key]
@@ -223,9 +256,15 @@ Ref: users.id < audit_logs.actor_id
 
 - `product_reports` and `comment_reports` are separate tables instead of one
   polymorphic `reports` table — keeps foreign keys real instead of a loose
-  type+id pair.
-- `product_daily_rankings` is a snapshot table, not something recalculated on read —
-  it's what makes past-day pages permanent (see ADR-009 in
+  type+id pair. Same reasoning applies to `user_follows`/`topic_follows`: kept as two
+  tables rather than one polymorphic `follows` table, on purpose.
+- `daily_rankings` and `period_rankings` are snapshot tables, not something
+  recalculated on read — that's what makes past-day pages permanent and keeps
+  week/month/all-time boards built only from frozen days (see ADR-009 and ADR-013 in
   [`03-architecture-decisions.md`](03-architecture-decisions.md)).
-- Vote-fraud signals (IP, device fingerprint, etc.) aren't modeled yet — add a table
-  here once the anti-abuse approach is decided, and log that decision as an ADR.
+- `votes.retracted_at` is a soft-delete, not a hard delete — keeps a retracted vote's
+  history around as a future anti-fraud signal (see ADR-014). IP/device-fingerprint
+  signals still aren't modeled — add a table here once that anti-abuse approach is
+  decided, and log it as an ADR.
+- `email`/`handle` on `users` need case-insensitive comparison (citext extension, or
+  a unique index on `lower(email)`) so two accounts can't differ only by case.

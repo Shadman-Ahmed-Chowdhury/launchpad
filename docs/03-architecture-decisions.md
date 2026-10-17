@@ -112,3 +112,43 @@ bottom. Don't delete old entries — mark them superseded instead.
   to an `audit_logs` table (actor, action, target, timestamp).
 - **Why:** Brief: "a record of every action our staff took, with who and when. We will
   be asked about this."
+
+## ADR-012: Email verification + password reset via an `auth_tokens` table
+
+- **Date:** 2026-10-17
+- **Status:** Accepted
+- **Decision:** Both flows share one `auth_tokens` table (`kind`: verify_email or
+  reset_password) instead of a single `verify_token` column on `users`. Only the
+  token's hash is stored, each row has `expires_at`, and `used_at` is set once
+  consumed so a link can't be replayed.
+- **Why:** A bare column on `users` can't expire, can't be reused for password reset,
+  and leaves a live secret sitting in the users table if leaked. A table gives both
+  flows expiry and single-use for free, and keeps `users` to profile/auth state only.
+
+## ADR-013: Rankings split into `daily_rankings` (frozen per day) + `period_rankings` (week/month/all-time)
+
+- **Date:** 2026-10-17
+- **Status:** Accepted — refines ADR-009, doesn't reverse it
+- **Decision:** `daily_rankings` holds one frozen row per product per day (global
+  front page only — the brief doesn't ask for a topic-specific daily board).
+  `period_rankings` holds weekly/monthly/all-time boards, each optionally scoped to a
+  topic (`topic_id` null = global board), built by summing already-frozen
+  `daily_rankings` rows — never recomputed from live votes. Score:
+  `score = (votes_count - 1) / (hours_since_launch + 2)^1.5`. Order: score desc,
+  frozen votes desc, product_id asc.
+- **Why:** The single `product_daily_rankings` table mixed two different jobs (the
+  permanent daily snapshot, and derived weekly/monthly/all-time boards) behind one
+  `period_type`/`period_key` string. Splitting them makes the frozen-day guarantee
+  (ADR-009) explicit in the schema and makes it structurally impossible for a
+  week/month/all-time board to include an unfinished today.
+
+## ADR-014: Votes are soft-retracted, not hard-deleted
+
+- **Date:** 2026-10-17
+- **Status:** Accepted
+- **Decision:** Taking back a vote sets `votes.retracted_at` instead of deleting the
+  row. The one-vote-per-member-per-product rule becomes a partial unique index on
+  `(product_id, user_id)` where `retracted_at is null`.
+- **Why:** Brief flags vote manipulation (fake accounts, one person with many logins,
+  scripts) as something we need to catch. Deleting a retracted vote throws away the
+  exact pattern (rapid vote/retract cycles) an anti-abuse check would need later.
