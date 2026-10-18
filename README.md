@@ -18,20 +18,18 @@ Full feature list: [`docs/02-features.md`](docs/02-features.md).
 ## Tech stack
 
 **Confirmed:**
-- Backend / API — Django + Django REST Framework
+- Backend / API — Laravel (PHP)
 - Frontend — Next.js (TypeScript)
-- Database — PostgreSQL
-- Cache / real-time — Redis
+- Database — MySQL
+- Cache / background jobs — Redis (Laravel Queues)
+- Real-time updates — Pusher (live vote counts, notification bell)
 
 **Decided, open to revisit:**
-- Task queue broker — RabbitMQ (durable, survives worker/provider outages)
-- Task runner — Celery (works with RabbitMQ, handles scheduled + retryable jobs)
-- Email — AWS SES
+- Email — AWS SES (via Laravel Mail, queued through Laravel Queues)
 
 **Suggested additions:**
 - File storage — AWS S3 (logos, screenshots, avatars)
-- Real-time updates — Django Channels + Redis (live vote counts, notification bell)
-- Search — Postgres full-text search first; move to Meilisearch/Elasticsearch if it's not fast enough
+- Search — MySQL `FULLTEXT` search first; move to Meilisearch/Elasticsearch if it's not fast enough
 - Error tracking — Sentry
 - CI — GitHub Actions
 - Hosting — Vercel (frontend), AWS ECS/Fargate or Render (backend + workers)
@@ -51,19 +49,18 @@ graph TD
     end
 
     subgraph Backend
-        API["Django REST API"]
-        WS["Django Channels\n(WebSocket: votes, notifications)"]
-        Worker["Celery workers"]
-        Beat["Celery beat\n(scheduled digests, reminders)"]
+        API["Laravel API"]
+        Worker["Queue workers\n(Laravel Queue, Redis driver)"]
+        Scheduler["Laravel Scheduler\n(scheduled digests, reminders)"]
     end
 
     subgraph Data
-        PG[(PostgreSQL)]
-        Redis[(Redis\ncache + channel layer)]
-        MQ[(RabbitMQ\ntask broker)]
+        MySQLDB[(MySQL)]
+        Redis[(Redis\ncache + queue)]
     end
 
     subgraph External
+        Pusher["Pusher\n(WebSocket: votes, notifications)"]
         SES["AWS SES\n(email)"]
         S3["AWS S3\n(media files)"]
         Google["Google OAuth"]
@@ -71,31 +68,31 @@ graph TD
 
     Browser --> Next
     Next -->|REST| API
-    Next -->|WebSocket| WS
-    API --> PG
+    Next -->|WebSocket| Pusher
+    API --> MySQLDB
     API --> Redis
     API --> S3
     API --> Google
-    WS --> Redis
-    API -->|enqueue jobs| MQ
-    Beat -->|schedule jobs| MQ
-    MQ --> Worker
-    Worker --> PG
+    API -->|broadcast| Pusher
+    API -->|enqueue jobs| Redis
+    Scheduler -->|dispatch jobs| Redis
+    Redis --> Worker
+    Worker --> MySQLDB
     Worker --> SES
     Worker --> S3
 ```
 
 **Flow in short:**
-- Next.js talks to Django over REST for normal requests, WebSocket for live updates.
-- Django writes to Postgres, uses Redis for caching and the channel layer.
-- Slow or "must not be lost" work (emails, digests, export files) goes through RabbitMQ to Celery workers, not the request/response cycle.
+- Next.js talks to Laravel over REST for normal requests, Pusher (WebSocket) for live updates.
+- Laravel writes to MySQL, uses Redis for caching and as the queue backend.
+- Slow or "must not be lost" work (emails, digests, export files) goes through Laravel Queues (Redis-backed, monitored with Horizon) to queue workers, not the request/response cycle.
 - Media files go to S3, not the app server.
 
 ## Repo layout
 
 ```
 launchpad/
-├── launchpad-backend/     # Django + DRF
+├── launchpad-backend/     # Laravel
 ├── launchpad-frontend/    # Next.js
 ├── docs/                  # brief, features, decisions, db schema
 ├── AGENTS.md              # conventions any coding agent should follow
@@ -111,23 +108,27 @@ launchpad/
 
 ## Getting started
 
-Needs Postgres, Redis, and RabbitMQ running locally (or point `DATABASE_URL` /
-`REDIS_URL` / `CELERY_BROKER_URL` in `.env` at wherever they're running).
+Needs MySQL and Redis running locally (or point `DB_HOST`/`DB_DATABASE`/etc. and
+`REDIS_HOST` in `.env` at wherever they're running).
 
 ### Backend
 
 ```bash
 cd launchpad-backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements/dev.txt
-cp .env.example .env   # edit if your local Postgres/Redis/RabbitMQ differ
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan serve
 ```
 
-Runs on Django 4.2 LTS — the only Python available locally is 3.9, and Django 5
-needs 3.10+. Worth upgrading Python later to move to Django 5.
+Run a queue worker alongside it for background jobs (email, digests, exports):
+
+```bash
+php artisan queue:work
+```
+
+Runs on Laravel 13, PHP 8.3+.
 
 ### Frontend
 
