@@ -12,7 +12,7 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-001: Django + DRF for backend/API
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-015](#adr-015-laravel-for-backendapi-supersedes-adr-001)
 - **Decision:** Django + Django REST Framework for all backend logic and the API.
 - **Why:** Client chose it. Batteries-included (auth, admin, ORM, migrations) fits a
   content + moderation heavy app like this one.
@@ -28,7 +28,7 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-003: PostgreSQL as the database
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-016](#adr-016-mysql-instead-of-postgresql-supersedes-adr-003)
 - **Decision:** PostgreSQL for all persistent data.
 - **Why:** Client chose it. Strong fit for relational data (products, votes, comments)
   and has full-text search built in, which we can use before reaching for a
@@ -37,7 +37,8 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-004: Redis for cache and real-time
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Partially superseded by [ADR-019](#adr-019-pusher-instead-of-django-channels-supersedes-the-real-time-portion-of-adr-004)
+  — real-time layer only. Redis's caching role (rankings, hot pages) is unchanged.
 - **Decision:** Redis for caching (rankings, hot pages) and as the Django Channels
   layer for WebSocket connections.
 - **Why:** Client chose it. Brief requires vote counts and the notification bell to
@@ -46,7 +47,7 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-005: RabbitMQ + Celery for background jobs
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-018](#adr-018-redis-backed-laravel-queues-instead-of-rabbitmq--celery-supersedes-adr-005)
 - **Decision:** RabbitMQ as the task broker, Celery as the worker/scheduler, for all
   email sending, digest generation, and export file generation.
 - **Why:** Brief says "if our email provider goes down for an hour, nothing should go
@@ -75,7 +76,7 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-008: Postgres full-text search first
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-017](#adr-017-mysql-fulltext-search-first-supersedes-adr-008)
 - **Decision:** Use Postgres full-text search (`tsvector`/`tsquery`) for product
   search. Revisit with Meilisearch/Elasticsearch only if it's not fast enough at scale.
 - **Why:** Brief wants search to "feel instant," but adding a separate search engine
@@ -96,7 +97,9 @@ bottom. Don't delete old entries — mark them superseded instead.
 ## ADR-010: Auth — Django sessions/JWT + Google OAuth, email verification required
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Partially superseded by [ADR-020](#adr-020-laravel-sanctum--socialite-for-auth-amends-the-framework-portion-of-adr-010)
+  — framework/mechanism only. The brief requirements below (verify-before-counts,
+  hashed passwords, Google OAuth) are unchanged.
 - **Decision:** Email+password (hashed with Django's default hasher) or Google OAuth
   to sign up. A vote or comment only counts once the email is verified.
 - **Why:** Brief: "we only want real people voting, so confirm the email address is
