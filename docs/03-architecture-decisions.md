@@ -155,3 +155,73 @@ bottom. Don't delete old entries — mark them superseded instead.
 - **Why:** Brief flags vote manipulation (fake accounts, one person with many logins,
   scripts) as something we need to catch. Deleting a retracted vote throws away the
   exact pattern (rapid vote/retract cycles) an anti-abuse check would need later.
+
+## ADR-015: Laravel for backend/API (supersedes ADR-001)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** Laravel (PHP) replaces Django + DRF for all backend logic and the API.
+  Role-based permissions (visitor/member/founder/reviewer/admin) move to Laravel
+  Policies/Gates in place of DRF permission classes.
+- **Why:** Team decision to move off Django. Laravel's batteries-included set
+  (Eloquent ORM, migrations, queues, Sanctum) still fits a content + moderation heavy
+  app the way Django did.
+
+## ADR-016: MySQL instead of PostgreSQL (supersedes ADR-003)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** MySQL for all persistent data.
+- **Why:** Follows from the Laravel move (ADR-015) — MySQL is the Laravel install's
+  default. The schema is relational either way; the one Postgres-specific feature it
+  used (full-text search) moves to MySQL's own equivalent — see ADR-017.
+
+## ADR-017: MySQL FULLTEXT search first (supersedes ADR-008)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** Use MySQL `FULLTEXT` indexes (InnoDB) for product search. Revisit with
+  Meilisearch/Elasticsearch only if it's not fast enough at scale.
+- **Why:** Same reasoning as ADR-008 — brief wants search to "feel instant," but a
+  dedicated search engine on day one is more than this scope needs. MySQL `FULLTEXT`
+  is the direct equivalent of Postgres `tsvector`/`tsquery` for this.
+
+## ADR-018: Redis-backed Laravel Queues instead of RabbitMQ + Celery (supersedes ADR-005)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** Laravel's queue system, Redis driver, for email sending, digest
+  generation, and export file generation, monitored with Laravel Horizon. Laravel's
+  Scheduler (cron-driven `schedule:run`) replaces Celery beat for the daily top-5,
+  weekly best-of, and launch-reminder jobs.
+- **Why:** Laravel has no native RabbitMQ driver (would need a third-party package);
+  Redis is already in the stack for caching, and Laravel Queue + Horizon gives
+  retries and monitoring without adding another broker to operate. Trade-off: a Redis
+  queue isn't disk-durable the way RabbitMQ is — acceptable because Redis persistence
+  (AOF) plus Horizon's retry-on-failure still covers an hour-long email-provider
+  outage, and jobs that exhaust retries land in `failed_jobs` for manual replay
+  instead of being silently dropped.
+
+## ADR-019: Pusher instead of Django Channels (supersedes the real-time portion of ADR-004)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** Pusher (hosted WebSocket service) + Laravel's broadcasting system for
+  live vote counts and the notification bell. Redis keeps its caching role (rankings,
+  hot pages) from ADR-004 unchanged.
+- **Why:** Laravel has no built-in equivalent to Django Channels. Pusher is Laravel's
+  standard hosted broadcasting driver and needs no self-hosted WebSocket server to
+  operate — simplest path to the same "update live, no page refresh" requirement.
+
+## ADR-020: Laravel Sanctum + Socialite for auth (amends the framework portion of ADR-010)
+
+- **Date:** 2026-10-18
+- **Status:** Accepted
+- **Decision:** Email+password (hashed with Laravel's default bcrypt hasher) or
+  Google OAuth (via Laravel Socialite) to sign up. Laravel Sanctum issues the API
+  tokens the Next.js frontend uses. A vote or comment only counts once the email is
+  verified — unchanged from ADR-010.
+- **Why:** Framework swap only — the brief's requirements (verified email before a
+  vote/comment counts, hashed passwords, Google OAuth, rate-limiting + audit logging
+  as the other anti-abuse layers) don't change. Sanctum + Socialite are Laravel's
+  standard tools for the same job Django sessions/JWT + django-allauth did.

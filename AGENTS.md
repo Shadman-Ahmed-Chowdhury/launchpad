@@ -12,9 +12,9 @@ Claude-specific notes are in [`CLAUDE.md`](CLAUDE.md), which points back here.
 
 ## Project shape
 
-- `launchpad-backend/` – Django + Django REST Framework
+- `launchpad-backend/` – Laravel (PHP)
 - `launchpad-frontend/` – Next.js (TypeScript)
-- Postgres for data, Redis for cache/real-time, RabbitMQ + Celery for background jobs
+- MySQL for data, Redis for cache + background jobs, Pusher for real-time
 
 ## General rules
 
@@ -24,15 +24,15 @@ Claude-specific notes are in [`CLAUDE.md`](CLAUDE.md), which points back here.
 - No secrets in code or commits. Use `.env` files (never committed) and a documented `.env.example`.
 - Every model field, endpoint, or role check should trace back to something in `docs/02-features.md` or the client brief. If it doesn't, ask first.
 
-## Backend (Django)
+## Backend (Laravel)
 
-- One Django app per domain area (e.g. `products`, `votes`, `comments`, `accounts`, `notifications`) — not one giant `core` app.
-- Use DRF serializers + viewsets/generic views. Keep business logic out of views — put it in services/model methods.
+- Group code by domain area (models, controllers, policies, requests for `products`, `votes`, `comments`, `accounts`, `notifications`, etc.) — don't dump everything in one giant controller/model.
+- Use Eloquent API Resources for responses and Form Requests for validation. Keep business logic out of controllers — put it in services/model methods.
 - All list endpoints are paginated.
-- Permissions are explicit per view (visitor/member/founder/reviewer/admin) — never rely on the frontend to hide something.
+- Permissions are explicit per route via Policies/Gates (visitor/member/founder/reviewer/admin) — never rely on the frontend to hide something.
 - Migrations are committed with the code that needs them. Never hand-edit a migration that's already been applied on a shared branch.
-- Background/slow work (email, digest generation, export files) goes through Celery — never block a request on it.
-- Format/lint with `black`, `isort`, `ruff` (or `flake8`). Tests with `pytest` + `pytest-django`.
+- Background/slow work (email, digest generation, export files) goes through Laravel Queues (Redis driver) — never block a request on it. Scheduled jobs (daily top-5, weekly best-of, launch reminders) go through the Laravel Scheduler.
+- Format/lint with `Pint`. Tests with `Pest`.
 - New env var → add it to `.env.example` with a one-line comment.
 
 ## Frontend (Next.js)
@@ -46,7 +46,7 @@ Claude-specific notes are in [`CLAUDE.md`](CLAUDE.md), which points back here.
 
 ## Security (the brief calls this out explicitly)
 
-- Hash passwords properly (Django's default hasher is fine — don't roll your own).
+- Hash passwords properly (Laravel's default bcrypt hasher is fine — don't roll your own).
 - Email must be verified before a member's vote/comment counts.
 - Rate-limit voting, signup, and login endpoints — the brief expects vote manipulation attempts.
 - Every staff action (approve, reject, suspend, feature, take down) writes to the audit log. No exceptions.

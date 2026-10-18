@@ -9,10 +9,10 @@ update this file in the same change whenever a model changes.
 // Docs: https://dbml.dbdiagram.io/docs
 
 Table users {
-  id int [primary key]
+  id bigint [primary key]
   first_name varchar
   last_name varchar
-  email varchar [unique] // case-insensitive (citext) so Foo@x.com and foo@x.com can't both sign up
+  email varchar [unique] // case-insensitive comparison needed so Foo@x.com and foo@x.com can't both sign up
   handle varchar [unique] // public profile slug, e.g. /u/amina
   auth_provider varchar // 'password' or 'google' — exactly one, enforced by a CHECK constraint
   password_hash text // required if auth_provider='password', else null
@@ -29,8 +29,8 @@ Table users {
 }
 
 Table user_links {
-  id int [primary key]
-  user_id int
+  id bigint [primary key]
+  user_id bigint
   label varchar // e.g. "Twitter", "Website"
   url varchar
   created_at timestamp
@@ -38,8 +38,8 @@ Table user_links {
 Ref: users.id < user_links.user_id
 
 Table auth_tokens {
-  id int [primary key]
-  user_id int
+  id bigint [primary key]
+  user_id bigint
   kind varchar // verify_email/reset_password
   token_hash varchar [unique] // hash of the token emailed to the user; raw token is never stored
   expires_at timestamp
@@ -49,15 +49,15 @@ Table auth_tokens {
 Ref: users.id < auth_tokens.user_id
 
 Table topics {
-  id int [primary key]
+  id bigint [primary key]
   name varchar
   slug varchar [unique]
   created_at timestamp
 }
 
 Table products {
-  id int [primary key]
-  founder_id int // users.id
+  id bigint [primary key]
+  founder_id bigint // users.id
   name varchar
   slug varchar [unique]
   tagline varchar // one-line pitch
@@ -74,17 +74,17 @@ Table products {
 Ref: users.id < products.founder_id
 
 Table product_topics {
-  id int [primary key]
-  product_id int
-  topic_id int
+  id bigint [primary key]
+  product_id bigint
+  topic_id bigint
   created_at timestamp
 }
 Ref: products.id < product_topics.product_id
 Ref: topics.id < product_topics.topic_id
 
 Table product_screenshots {
-  id int [primary key]
-  product_id int
+  id bigint [primary key]
+  product_id bigint
   image varchar // S3 key
   position int [default: 0]
   created_at timestamp
@@ -92,9 +92,9 @@ Table product_screenshots {
 Ref: products.id < product_screenshots.product_id
 
 Table product_reviews {
-  id int [primary key]
-  product_id int
-  reviewer_id int // users.id, role=reviewer/admin
+  id bigint [primary key]
+  product_id bigint
+  reviewer_id bigint // users.id, role=reviewer/admin
   action varchar // approved/rejected/changes_requested
   notes text // nullable, shown to founder
   created_at timestamp
@@ -103,9 +103,9 @@ Ref: products.id < product_reviews.product_id
 Ref: users.id < product_reviews.reviewer_id
 
 Table votes {
-  id int [primary key]
-  product_id int
-  user_id int
+  id bigint [primary key]
+  product_id bigint
+  user_id bigint
   created_at timestamp
   retracted_at timestamp // nullable; set when they take their vote back instead of deleting the row
 
@@ -117,10 +117,10 @@ Ref: products.id < votes.product_id
 Ref: users.id < votes.user_id
 
 Table comments {
-  id int [primary key]
-  product_id int
-  user_id int
-  parent_comment_id int // nullable, self-ref for replies
+  id bigint [primary key]
+  product_id bigint
+  user_id bigint
+  parent_comment_id bigint // nullable, self-ref for replies
   body text
   deleted_at timestamp // nullable; set after a report is upheld (soft-delete)
   created_at timestamp
@@ -131,12 +131,12 @@ Ref: users.id < comments.user_id
 Ref: comments.id < comments.parent_comment_id
 
 Table product_reports {
-  id int [primary key]
-  product_id int
-  reporter_id int // users.id
+  id bigint [primary key]
+  product_id bigint
+  reporter_id bigint // users.id
   reason varchar
   status varchar [default: 'pending'] // pending/resolved/dismissed
-  resolved_by int // users.id, nullable
+  resolved_by bigint // users.id, nullable
   resolved_at timestamp // nullable
   created_at timestamp
 }
@@ -144,12 +144,12 @@ Ref: products.id < product_reports.product_id
 Ref: users.id < product_reports.reporter_id
 
 Table comment_reports {
-  id int [primary key]
-  comment_id int
-  reporter_id int // users.id
+  id bigint [primary key]
+  comment_id bigint
+  reporter_id bigint // users.id
   reason varchar
   status varchar [default: 'pending'] // pending/resolved/dismissed
-  resolved_by int // users.id, nullable
+  resolved_by bigint // users.id, nullable
   resolved_at timestamp // nullable
   created_at timestamp
 }
@@ -157,9 +157,9 @@ Ref: comments.id < comment_reports.comment_id
 Ref: users.id < comment_reports.reporter_id
 
 Table user_follows {
-  id int [primary key]
-  follower_id int // users.id
-  followee_id int // users.id
+  id bigint [primary key]
+  follower_id bigint // users.id
+  followee_id bigint // users.id
   created_at timestamp
 
   indexes {
@@ -170,9 +170,9 @@ Ref: users.id < user_follows.follower_id
 Ref: users.id < user_follows.followee_id
 
 Table topic_follows {
-  id int [primary key]
-  user_id int
-  topic_id int
+  id bigint [primary key]
+  user_id bigint
+  topic_id bigint
   created_at timestamp
 
   indexes {
@@ -183,8 +183,8 @@ Ref: users.id < topic_follows.user_id
 Ref: topics.id < topic_follows.topic_id
 
 Table notification_preferences {
-  id int [primary key]
-  user_id int
+  id bigint [primary key]
+  user_id bigint
   notification_type varchar // e.g. product_approved, new_comment, weekly_digest
   is_enabled bool [default: true]
 
@@ -195,8 +195,8 @@ Table notification_preferences {
 Ref: users.id < notification_preferences.user_id
 
 Table notifications {
-  id int [primary key]
-  user_id int // recipient
+  id bigint [primary key]
+  user_id bigint // recipient
   type varchar // matches notification_type above
   data json // context, e.g. product_id, comment_id
   read_at timestamp // nullable; null = unread
@@ -205,8 +205,8 @@ Table notifications {
 Ref: users.id < notifications.user_id
 
 Table daily_rankings {
-  id int [primary key]
-  product_id int
+  id bigint [primary key]
+  product_id bigint
   rank_date date // the day being frozen, e.g. '2026-09-21'
   position int
   score decimal
@@ -221,11 +221,11 @@ Table daily_rankings {
 Ref: products.id < daily_rankings.product_id
 
 Table period_rankings {
-  id int [primary key]
+  id bigint [primary key]
   period_type varchar // weekly/monthly/all_time
   period_start date // week starts Monday, month starts day 1; null only for all_time
-  topic_id int // nullable; null = global board, set = that topic's board
-  product_id int
+  topic_id bigint // nullable; null = global board, set = that topic's board
+  product_id bigint
   position int
   score decimal
   votes_count int
@@ -241,11 +241,11 @@ Ref: products.id < period_rankings.product_id
 Ref: topics.id < period_rankings.topic_id
 
 Table audit_logs {
-  id int [primary key]
-  actor_id int // users.id, staff who performed the action
+  id bigint [primary key]
+  actor_id bigint // users.id, staff who performed the action
   action varchar // approve_product, reject_product, suspend_user, feature_product, takedown_product, resolve_report
   target_type varchar // product/user/comment
-  target_id int
+  target_id bigint
   notes text // nullable
   created_at timestamp
 }
@@ -266,5 +266,10 @@ Ref: users.id < audit_logs.actor_id
   history around as a future anti-fraud signal (see ADR-014). IP/device-fingerprint
   signals still aren't modeled — add a table here once that anti-abuse approach is
   decided, and log it as an ADR.
-- `email`/`handle` on `users` need case-insensitive comparison (citext extension, or
-  a unique index on `lower(email)`) so two accounts can't differ only by case.
+- `email`/`handle` on `users` need case-insensitive comparison so two accounts can't
+  differ only by case — MySQL's default collation (`utf8mb4_0900_ai_ci` /
+  `utf8mb4_unicode_ci`) already compares case-insensitively, so this falls out for
+  free as long as the migration doesn't force a case-sensitive `_bin`/`_cs` collation
+  on these columns.
+- `id` and foreign-key columns are `bigint` to match Laravel/Eloquent's default
+  migration helpers (`id()` / `foreignId()`), which use unsigned big integers.
