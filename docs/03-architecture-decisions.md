@@ -225,3 +225,43 @@ bottom. Don't delete old entries — mark them superseded instead.
   vote/comment counts, hashed passwords, Google OAuth, rate-limiting + audit logging
   as the other anti-abuse layers) don't change. Sanctum + Socialite are Laravel's
   standard tools for the same job Django sessions/JWT + django-allauth did.
+
+## ADR-021: Google sign-in is a single token-exchange endpoint, not a server redirect (refines ADR-020)
+
+- **Date:** 2026-10-19
+- **Status:** Accepted
+- **Decision:** One endpoint, `POST /api/auth/google`, takes an OAuth2 **access token**
+  the Next.js frontend already obtained from Google's own client-side SDK. The backend
+  verifies it by calling `Socialite::driver('google')->stateless()->userFromToken()`
+  (which hits Google's userinfo API), then finds-or-creates the user by `google_id` and
+  returns a Sanctum token — no server-side redirect/callback pair, no shared session
+  between frontend and backend.
+- **Why:** Frontend and backend are separate apps (and a native mobile app is planned
+  for next year per the brief) — a classic Socialite redirect flow needs session/state
+  shared across domains, which doesn't fit either. A single token-exchange endpoint
+  works the same way for a web SPA and a future mobile app. Using an OAuth access token
+  (not Google Identity Services' JWT `id_token`) keeps this on Socialite as already
+  decided in ADR-020, instead of adding a separate JWT-verification dependency.
+
+## ADR-022: One success/error envelope for every API response
+
+- **Date:** 2026-10-19
+- **Status:** Accepted
+- **Decision:** Every endpoint responds in one of these shapes:
+  - Success: `{"data": ..., "message": ...}` — `data` holds the payload (a Resource,
+    a list, or `null` for an action with nothing to return), `message` is `null`
+    unless there's a human-readable note (e.g. "Password reset."). List endpoints get
+    pagination `meta`/`links` for free from Laravel's `AnonymousResourceCollection`
+    (`UserResource::collection($paginator)`) — no extra work needed there.
+  - Validation error (422): `{"message": "...", "errors": {"field": ["..."]}}` —
+    Laravel's default `ValidationException` shape, unchanged.
+  - Any other error (401/403/404/429/500): `{"message": "..."}` — Laravel's default
+    exception JSON, unchanged.
+  Controllers build the success shape with a `respond($data, $message, $status)`
+  helper on the base `Controller` — not by hand-rolling `response()->json([...])`.
+- **Why:** Without a shared helper, early endpoints (register/login/profile) each
+  picked their own top-level keys (`user`, `token`, `message`) — fine alone, but it
+  means the frontend's API client can't treat every response the same way. One
+  envelope, defined once on the base controller, costs nothing extra per endpoint and
+  keeps every future controller consistent by default. The error shapes need no
+  custom exception handling at all — they're already Laravel's defaults.
