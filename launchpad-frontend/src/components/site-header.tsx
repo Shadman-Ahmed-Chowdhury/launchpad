@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { UserMenu } from "@/components/user-menu";
 import { getCurrentUser } from "@/lib/auth";
-import { logoutAction } from "@/app/actions/auth";
 
 export async function SiteHeader({ nav = true }: { nav?: boolean }) {
   const user = nav ? await getCurrentUser() : null;
@@ -22,28 +22,7 @@ export async function SiteHeader({ nav = true }: { nav?: boolean }) {
               Products
             </Link>
             {user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-muted transition-colors hover:text-foreground"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/settings"
-                  className="text-muted transition-colors hover:text-foreground"
-                >
-                  {user.firstName}
-                </Link>
-                <form action={logoutAction}>
-                  <button
-                    type="submit"
-                    className="rounded-full border border-hairline px-4 py-2 font-medium transition-colors hover:border-foreground"
-                  >
-                    Log out
-                  </button>
-                </form>
-              </>
+              <UserMenu user={user} />
             ) : (
               <>
                 <Link

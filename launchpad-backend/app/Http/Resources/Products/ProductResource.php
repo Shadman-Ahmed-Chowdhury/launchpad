@@ -21,6 +21,7 @@ class ProductResource extends JsonResource
             'logo' => $this->logoUrl(),
             'topics' => $this->whenLoaded('topics', fn () => $this->topics->pluck('name')->values()),
             'website_url' => $this->website_url,
+            'status' => $this->status,
             'votes_count' => $this->votes_count,
             'launch_date' => $this->launch_date,
         ];

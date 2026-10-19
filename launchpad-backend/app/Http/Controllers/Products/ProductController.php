@@ -8,6 +8,7 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\Products\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,15 +31,39 @@ class ProductController extends Controller
     }
 
     /**
-     * A single launched product's public page.
+     * The authenticated founder's own products, any status, newest first —
+     * powers the dashboard (the public `index()` above only shows `launched`
+     * products, so a founder can't see their own drafts through it).
      */
-    public function show(string $slug): JsonResponse
+    public function mine(Request $request): AnonymousResourceCollection
+    {
+        $products = $request->user()->products()
+            ->withCount('votes')
+            ->with('topics')
+            ->latest()
+            ->paginate();
+
+        return ProductResource::collection($products);
+    }
+
+    /**
+     * A single product's page. Public once `launched`; before that, only the
+     * owning founder can preview it (e.g. to prefill the edit form) — optional
+     * auth via the `sanctum` guard directly, since this route has no
+     * `auth:sanctum` middleware and must still work for anonymous visitors.
+     */
+    public function show(Request $request, string $slug): JsonResponse
     {
         $product = Product::where('slug', $slug)
-            ->where('status', 'launched')
             ->withCount('votes')
             ->with('topics')
             ->firstOrFail();
+
+        $viewer = $request->user('sanctum');
+
+        if ($product->status !== 'launched' && (! $viewer || ! $viewer->is($product->founder))) {
+            abort(404);
+        }
 
         return $this->respond(new ProductResource($product));
     }

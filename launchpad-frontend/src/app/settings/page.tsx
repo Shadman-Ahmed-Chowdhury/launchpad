@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { requireUser } from "@/lib/auth";
-import { ChangePasswordForm } from "./change-password-form";
+import { ProfileSettingsForm } from "./profile-settings-form";
 
 export default async function SettingsPage() {
   const user = await requireUser("/settings");
@@ -14,17 +15,19 @@ export default async function SettingsPage() {
         <h1 className="font-display text-3xl tracking-tight">
           Account settings
         </h1>
+        <p className="mt-2 text-muted">Edit your public profile.</p>
 
-        {user.authProvider === "google" ? (
-          <p className="mt-2 text-muted">
-            You signed up with Google, so there&apos;s no password to change
-            here.
-          </p>
-        ) : (
-          <>
-            <p className="mt-2 text-muted">Change your password.</p>
-            <ChangePasswordForm />
-          </>
+        <ProfileSettingsForm user={user} />
+
+        {user.authProvider === "password" && (
+          <div className="mt-10 border-t border-hairline pt-6">
+            <Link
+              href="/settings/password"
+              className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-gold"
+            >
+              Change password
+            </Link>
+          </div>
         )}
       </main>
 

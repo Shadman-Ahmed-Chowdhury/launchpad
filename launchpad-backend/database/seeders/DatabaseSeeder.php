@@ -30,6 +30,20 @@ class DatabaseSeeder extends Seeder
             ['name' => 'DevOps', 'slug' => 'devops'],
             ['name' => 'No-Code', 'slug' => 'no-code'],
             ['name' => 'Design', 'slug' => 'design'],
+            ['name' => 'Marketing', 'slug' => 'marketing'],
+            ['name' => 'Artificial Intelligence', 'slug' => 'artificial-intelligence'],
+            ['name' => 'Health & Fitness', 'slug' => 'health-fitness'],
+            ['name' => 'Education', 'slug' => 'education'],
+            ['name' => 'Finance', 'slug' => 'finance'],
+            ['name' => 'E-commerce', 'slug' => 'e-commerce'],
+            ['name' => 'Social Media', 'slug' => 'social-media'],
+            ['name' => 'Gaming', 'slug' => 'gaming'],
+            ['name' => 'Security', 'slug' => 'security'],
+            ['name' => 'Analytics', 'slug' => 'analytics'],
+            ['name' => 'Mobile', 'slug' => 'mobile'],
+            ['name' => 'SaaS', 'slug' => 'saas'],
+            ['name' => 'Open Source', 'slug' => 'open-source'],
+            ['name' => 'Customer Support', 'slug' => 'customer-support'],
         ])->map(fn (array $attributes) => Topic::firstOrCreate(['slug' => $attributes['slug']], $attributes));
 
         $founders = $this->pickOrCreateUsers(3, []);
