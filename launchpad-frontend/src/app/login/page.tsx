@@ -1,10 +1,19 @@
-"use client";
-
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { redirectIfAuthenticated } from "@/lib/auth";
+import { LoginForm } from "./login-form";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  const target = next?.startsWith("/") ? next : "/";
+
+  await redirectIfAuthenticated(target);
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader nav={false} />
@@ -18,53 +27,7 @@ export default function LoginPage() {
             Sign in to vote, comment, and follow.
           </p>
 
-          <form
-            onSubmit={(event) => event.preventDefault()}
-            className="mt-10 space-y-6"
-          >
-            <div>
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="you@example.com"
-                className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-muted transition-colors hover:text-foreground"
-                >
-                  Forgot?
-                </Link>
-              </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="••••••••"
-                className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-full bg-gold-fill px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-gold-fill/90"
-            >
-              Sign in
-            </button>
-          </form>
+          <LoginForm next={target} />
 
           <div className="mt-8 flex items-center gap-4 text-sm text-muted">
             <div className="h-px flex-1 bg-hairline" />

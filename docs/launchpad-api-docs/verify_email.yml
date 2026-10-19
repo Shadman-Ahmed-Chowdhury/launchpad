@@ -1,6 +1,7 @@
 info:
   name: Verify Email
   type: http
+  seq: 1
 
 http:
   method: POST
@@ -15,6 +16,11 @@ http:
       - name: token
         value: "{{verify_email_token}}"
   auth: inherit
+
+runtime:
+  variables:
+    - name: verify_email_token
+      value: 5ed4222461cae13b629252a735c9978046dd15668dca4409d437bef1a93ed037
 
 settings:
   encodeUrl: true

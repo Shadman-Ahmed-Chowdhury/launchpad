@@ -1,6 +1,7 @@
 info:
   name: Login
   type: http
+  seq: 1
 
 http:
   method: POST
@@ -13,7 +14,7 @@ http:
     type: form-urlencoded
     data:
       - name: email
-        value: shadman@yopmail.com
+        value: mow@yopmail.com
       - name: password
         value: Admin@123
   auth: inherit

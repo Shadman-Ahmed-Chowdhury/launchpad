@@ -13,7 +13,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Single entry point for talking to the Django API.
+ * Single entry point for talking to the Laravel API.
  * Pages/components should call this instead of using `fetch` directly.
  */
 export async function apiFetch<T>(
@@ -29,9 +29,9 @@ export async function apiFetch<T>(
   });
 
   const contentType = response.headers.get("content-type") ?? "";
-  const body = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  const raw = response.status === 204 ? "" : await response.text();
+  const body =
+    raw && contentType.includes("application/json") ? JSON.parse(raw) : raw;
 
   if (!response.ok) {
     throw new ApiError(response.status, body);
