@@ -1,0 +1,23 @@
+info:
+  name: Verify Email
+  type: http
+
+http:
+  method: POST
+  url: http://localhost:8000/api/auth/email/verify
+  params:
+    - name: ""
+      value: ""
+      type: query
+  body:
+    type: form-urlencoded
+    data:
+      - name: token
+        value: "{{verify_email_token}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
