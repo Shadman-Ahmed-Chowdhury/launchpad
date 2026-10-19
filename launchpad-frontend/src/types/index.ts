@@ -5,14 +5,30 @@
 
 export type UserRole = "member" | "reviewer" | "admin";
 
+export type AuthProvider = "password" | "google";
+
+export interface UserLink {
+  id: number;
+  label: string;
+  url: string;
+}
+
+/**
+ * The authenticated member's own account — matches AuthUserResource.
+ */
 export interface User {
   id: number;
   firstName: string;
   lastName: string;
   email: string;
-  avatar: string | null;
+  handle: string;
+  authProvider: AuthProvider;
   role: UserRole;
   bio: string | null;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  links: UserLink[];
+  createdAt: string;
 }
 
 export type ProductStatus =

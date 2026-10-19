@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { getCurrentUser } from "@/lib/auth";
+import { logoutAction } from "@/app/actions/auth";
 
-export function SiteHeader({ nav = true }: { nav?: boolean }) {
+export async function SiteHeader({ nav = true }: { nav?: boolean }) {
+  const user = nav ? await getCurrentUser() : null;
+
   return (
     <header className="border-b border-hairline">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
@@ -17,18 +21,45 @@ export function SiteHeader({ nav = true }: { nav?: boolean }) {
             >
               Products
             </Link>
-            <Link
-              href="/login"
-              className="text-muted transition-colors hover:text-foreground"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-full bg-gold-fill px-4 py-2 font-medium text-background transition-colors hover:bg-gold-fill/90"
-            >
-              Sign up
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/settings"
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  {user.firstName}
+                </Link>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="rounded-full border border-hairline px-4 py-2 font-medium transition-colors hover:border-foreground"
+                  >
+                    Log out
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-gold-fill px-4 py-2 font-medium text-background transition-colors hover:bg-gold-fill/90"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </nav>
         )}
       </div>

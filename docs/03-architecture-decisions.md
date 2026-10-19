@@ -265,3 +265,31 @@ bottom. Don't delete old entries — mark them superseded instead.
   envelope, defined once on the base controller, costs nothing extra per endpoint and
   keeps every future controller consistent by default. The error shapes need no
   custom exception handling at all — they're already Laravel's defaults.
+
+## ADR-023: Frontend holds the Sanctum token in an httpOnly cookie, set by Server Actions
+
+- **Date:** 2026-10-19
+- **Status:** Accepted
+- **Decision:** Next.js Server Actions (`src/app/actions/auth.ts`) are the only code
+  that calls the auth endpoints for mutations (register, login, logout, forgot/reset
+  password, verify/resend email, change password). On success they write the Sanctum
+  plain-text token to an httpOnly, `secure` (in production), `sameSite: lax` cookie
+  (`src/lib/session.ts`) — the token never reaches client-side JS. Reads go through a
+  small DAL (`src/lib/auth.ts`'s `getCurrentUser()`), which sends the cookie's token as
+  a Bearer header to `GET /api/me` and is memoized per request with React's `cache()`.
+  `requireUser()` wraps it for pages that need a signed-in member and redirects to
+  `/login?next=<path>` otherwise. No Next.js API routes (`route.ts`) were added — the
+  Server Actions call the Laravel API directly, so there's no second REST surface to
+  keep in sync with the backend's.
+  Route protection is done per-page (`/dashboard`, `/settings` each call
+  `requireUser()`) rather than in `proxy.ts` (Next 16's renamed `middleware.js`) —
+  with only two protected routes today, a project-wide proxy is more than the current
+  scope needs; the Next.js auth guide calls per-route DAL checks sufficient on their
+  own and proxy-level checks strictly optional.
+- **Why:** ADR-021 already ruled out a shared session between frontend and backend, so
+  there's no cookie Laravel itself can read — the frontend's cookie is purely a Next.js
+  session concern, sent back to Laravel as a Bearer token on every request. httpOnly
+  keeps the token out of reach of an XSS payload (the brief's security section calls
+  out hardening the auth surface), and Server Actions mean forms post straight to
+  server-side code without a client-side fetch layer or a parallel set of Next API
+  routes just to proxy requests.
