@@ -7,6 +7,7 @@ use App\Http\Controllers\Accounts\PasswordResetController;
 use App\Http\Controllers\Accounts\ProfileController;
 use App\Http\Controllers\Accounts\RegisterController;
 use App\Http\Controllers\Accounts\SessionController;
+use App\Http\Controllers\Products\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -31,4 +32,13 @@ Route::get('/users/{handle}', [ProfileController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::patch('/me', [ProfileController::class, 'update']);
+});
+
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{slug}', [ProductController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/products', [ProductController::class, 'store']);
+    Route::patch('/products/{slug}', [ProductController::class, 'update']);
+    Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
 });

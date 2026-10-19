@@ -1,4 +1,4 @@
-import rawProducts from "@/data/products.json";
+import { apiFetch, ApiError } from "@/lib/api-client";
 import type { Product } from "@/types";
 
 interface RawProduct {
@@ -14,12 +14,6 @@ interface RawProduct {
   launch_date: string;
 }
 
-/**
- * `products.json` is shaped like a Django REST Framework list response
- * (snake_case, matching docs/04-db-diagram.md) so that swapping this for
- * `apiFetch<RawProduct[]>("/api/products/")` later is a one-line change —
- * everything downstream already consumes the mapped `Product` type.
- */
 function mapProduct(raw: RawProduct): Product {
   return {
     id: raw.id,
@@ -35,12 +29,26 @@ function mapProduct(raw: RawProduct): Product {
   };
 }
 
-export function getProducts(): Product[] {
-  return (rawProducts as RawProduct[])
-    .map(mapProduct)
-    .sort((a, b) => b.votesCount - a.votesCount);
+export async function getProducts(): Promise<Product[]> {
+  const { data } = await apiFetch<{ data: RawProduct[] }>("/api/products");
+
+  return data.map(mapProduct).sort((a, b) => b.votesCount - a.votesCount);
 }
 
-export function getProductBySlug(slug: string): Product | undefined {
-  return getProducts().find((product) => product.slug === slug);
+export async function getProductBySlug(
+  slug: string,
+): Promise<Product | undefined> {
+  try {
+    const { data } = await apiFetch<{ data: RawProduct }>(
+      `/api/products/${slug}`,
+    );
+
+    return mapProduct(data);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return undefined;
+    }
+
+    throw error;
+  }
 }
