@@ -42,9 +42,9 @@ export type ProductStatus =
   | "taken_down";
 
 /**
- * Shape used by the static products list/detail pages today (see
- * src/lib/products.ts). Founder, status, and moderation fields aren't
- * included yet — add them once submission/review flows are built.
+ * Shape used by the products list/detail/dashboard pages (see
+ * src/lib/products.ts). Founder isn't included yet — add it once a product
+ * page needs to show who submitted it.
  */
 export interface Product {
   id: number;
@@ -55,6 +55,7 @@ export interface Product {
   logo: string | null;
   topics: string[];
   websiteUrl: string;
+  status: ProductStatus;
   votesCount: number;
   launchDate: string | null;
 }

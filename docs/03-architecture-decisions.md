@@ -293,3 +293,26 @@ bottom. Don't delete old entries — mark them superseded instead.
   out hardening the auth surface), and Server Actions mean forms post straight to
   server-side code without a client-side fetch layer or a parallel set of Next API
   routes just to proxy requests.
+
+## ADR-024: Products CRUD API ships ahead of the review/launch workflow and the vote-casting endpoint
+
+- **Date:** 2026-10-19
+- **Status:** Accepted
+- **Decision:** `/api/products` (index/show public, store/update/destroy behind
+  `auth:sanctum`) is the first slice of the Products domain. It intentionally does not
+  implement: reviewer approval, launch-day scheduling, the per-day launch-slot limit,
+  or a vote-casting/retraction endpoint — `store` always creates a `draft`, `update`
+  only allows editing after launch per `docs/02-features.md` (description/website_url),
+  and vote counts come only from rows a seeder inserts directly. `index` orders by raw
+  `votes_count` (via `withCount('votes')`), not the ADR-009/013 decay score — there's no
+  ranking job yet to produce that. The `votes` table's unique index on
+  `(product_id, user_id)` is a plain unique, not the partial/retract-aware unique
+  ADR-014 describes, since nothing retracts a vote yet.
+- **Why:** The frontend needed real products with real vote counts to replace its
+  static JSON fixture now. Building the full review/scheduling/ranking/voting
+  machinery in the same change would be far more than that need requires (see
+  AGENTS.md: "don't add features... the current task doesn't need"). Each deferred
+  piece is a separate, already-scoped feature (reviewer queue, launch scheduling,
+  ADR-009/013 ranking, member voting) that can land as its own change without
+  reshaping what's built here — `status`, `retracted_at`, and the resource shape are
+  already in place for them.

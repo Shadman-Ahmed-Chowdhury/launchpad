@@ -1,34 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { apiFetch, ApiError } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import { getAuthToken, setAuthToken, clearAuthToken } from "@/lib/session";
+import { fieldErrors, errorMessage, type AuthFormState } from "@/lib/action-state";
 
-export type AuthFormState =
-  | {
-      errors?: Record<string, string[]>;
-      message?: string;
-    }
-  | undefined;
+export type { AuthFormState };
 
 interface AuthPayload {
   user: unknown;
   token: string;
-}
-
-function fieldErrors(error: unknown): Record<string, string[]> | undefined {
-  if (error instanceof ApiError && typeof error.body === "object" && error.body !== null) {
-    return (error.body as { errors?: Record<string, string[]> }).errors;
-  }
-  return undefined;
-}
-
-function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError && typeof error.body === "object" && error.body !== null) {
-    const message = (error.body as { message?: string }).message;
-    if (message) return message;
-  }
-  return fallback;
 }
 
 function safeNext(next: FormDataEntryValue | null): string {

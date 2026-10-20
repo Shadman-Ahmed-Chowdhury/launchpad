@@ -38,8 +38,9 @@ const roles = [
   },
 ];
 
-export default function Home() {
-  const todaysLaunches = getProducts().slice(0, 4);
+export default async function Home() {
+  const products = await getProducts();
+  const todaysLaunches = products.slice(0, 4);
 
   return (
     <div className="flex min-h-screen flex-col">
