@@ -23,6 +23,14 @@ class DatabaseSeeder extends Seeder
             User::factory()->create(['email' => 'test@example.com']);
         }
 
+        if (! User::where('email', 'reviewer@example.com')->exists()) {
+            User::factory()->reviewer()->create(['email' => 'reviewer@example.com']);
+        }
+
+        if (! User::where('email', 'admin@example.com')->exists()) {
+            User::factory()->admin()->create(['email' => 'admin@example.com']);
+        }
+
         $topics = collect([
             ['name' => 'Productivity', 'slug' => 'productivity'],
             ['name' => 'Developer Tools', 'slug' => 'developer-tools'],
@@ -78,8 +86,13 @@ class DatabaseSeeder extends Seeder
 
         foreach ($products as $index => $definition) {
             $founder = $founders[$index];
+            // Leave the last one in the reviewer queue so /staff isn't empty
+            // on a fresh seed (see ADR-025).
+            $isLast = $index === count($products) - 1;
 
-            $product = Product::factory()->launched()->create([
+            $factory = $isLast ? Product::factory()->pendingReview() : Product::factory()->launched();
+
+            $product = $factory->create([
                 'founder_id' => $founder->id,
                 'name' => $definition['name'],
                 'slug' => Product::generateUniqueSlug($definition['name']),
@@ -91,6 +104,10 @@ class DatabaseSeeder extends Seeder
             $product->topics()->sync(
                 $topics->whereIn('name', $definition['topics'])->pluck('id')
             );
+
+            if ($isLast) {
+                continue;
+            }
 
             // No voting on your own product (see docs/01-client-brief.md).
             $voterPool = $voters->reject(fn (User $voter) => $voter->is($founder))

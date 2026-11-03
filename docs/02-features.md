@@ -32,6 +32,9 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 
 - Can submit a product: name, one-line pitch, description, logo, screenshots, website link, up to 3 topics
 - Can save a submission as draft and finish later
+- Submits a draft into the review queue when it's ready; can resubmit after changes are requested (rejected is final — no resubmit)
+- Can't edit a product while it's in the review queue (pending review)
+- Sees the outcome and the reviewer's reason on their dashboard (email/in-site notifications aren't built yet — see ADR-025)
 - Gets notified when the product is approved, rejected, or sent back for changes
 - Can pick a launch day after approval, and change it until launch (limited slots per day)
 - Can edit description and links after launch (nothing else)
@@ -54,6 +57,7 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 - Can take down a product
 - Can feature a product on the front page
 - Can view the full audit log (who did what, when)
+- Can create a reviewer account directly (no public signup path to that role) and see the list of current reviewers
 
 ## Not in this version
 

@@ -2,6 +2,18 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 import { getAuthToken } from "@/lib/session";
 import type { Product, ProductStatus, Topic } from "@/types";
 
+interface RawProductFounder {
+  id: number;
+  name: string;
+  handle: string;
+}
+
+interface RawProductReview {
+  action: ProductStatus;
+  notes: string | null;
+  created_at: string;
+}
+
 interface RawProduct {
   id: number;
   slug: string;
@@ -14,6 +26,9 @@ interface RawProduct {
   status: ProductStatus;
   votes_count: number;
   launch_date: string;
+  submitted_at: string | null;
+  founder?: RawProductFounder;
+  latest_review?: RawProductReview;
 }
 
 interface RawTopic {
@@ -35,6 +50,15 @@ function mapProduct(raw: RawProduct): Product {
     status: raw.status,
     votesCount: raw.votes_count,
     launchDate: raw.launch_date,
+    submittedAt: raw.submitted_at,
+    founder: raw.founder,
+    latestReview: raw.latest_review
+      ? {
+          action: raw.latest_review.action,
+          notes: raw.latest_review.notes,
+          createdAt: raw.latest_review.created_at,
+        }
+      : undefined,
   };
 }
 
@@ -72,6 +96,22 @@ export async function getMyProducts(): Promise<Product[]> {
   if (!token) return [];
 
   const { data } = await apiFetch<{ data: RawProduct[] }>("/api/me/products", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return data.map(mapProduct);
+}
+
+/**
+ * The reviewer queue: products waiting for a decision, oldest submission
+ * first (see docs/01-client-brief.md "staff tools"). Returns an empty list
+ * if there's no session — the page itself gates access via `requireStaff()`.
+ */
+export async function getReviewQueue(): Promise<Product[]> {
+  const token = await getAuthToken();
+  if (!token) return [];
+
+  const { data } = await apiFetch<{ data: RawProduct[] }>("/api/reviewer/products", {
     headers: { Authorization: `Bearer ${token}` },
   });
 

@@ -71,4 +71,26 @@ class UserFactory extends Factory
             'is_suspended' => true,
         ]);
     }
+
+    /**
+     * Indicate that this user is a reviewer (staff who can approve/reject
+     * submissions — see docs/02-features.md).
+     */
+    public function reviewer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'reviewer',
+        ]);
+    }
+
+    /**
+     * Indicate that this user is an admin (everything a reviewer can do,
+     * plus suspend/takedown/feature — see docs/02-features.md).
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
 }

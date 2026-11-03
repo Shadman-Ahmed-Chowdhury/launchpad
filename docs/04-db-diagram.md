@@ -67,6 +67,7 @@ Table products {
   status varchar [default: 'draft'] // draft/pending_review/changes_requested/rejected/approved/scheduled/launched/taken_down
   launch_date date // nullable until scheduled
   launched_at timestamp // nullable, set when it actually goes live
+  submitted_at timestamp // nullable; set each time the founder submits/resubmits, orders the reviewer queue
   is_featured bool [default: false]
   created_at timestamp
   updated_at timestamp
@@ -254,6 +255,11 @@ Ref: users.id < audit_logs.actor_id
 
 ## Notes
 
+- `product_reviews` and `audit_logs` are implemented as of ADR-025 (submit +
+  review flow) — both have only `created_at` (no `updated_at`), since a
+  review/audit row is never edited once written. `audit_logs.target_id` has
+  no foreign key — it's a loose polymorphic pair with `target_type`, same
+  reasoning as `product_reports`/`comment_reports` below.
 - `product_reports` and `comment_reports` are separate tables instead of one
   polymorphic `reports` table — keeps foreign keys real instead of a loose
   type+id pair. Same reasoning applies to `user_follows`/`topic_follows`: kept as two

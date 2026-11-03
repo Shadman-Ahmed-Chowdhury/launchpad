@@ -83,6 +83,25 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->auth_provider === 'password';
     }
 
+    public function isReviewer(): bool
+    {
+        return $this->role === 'reviewer';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Reviewer or admin — the two staff roles that can access the review
+     * queue (see docs/02-features.md).
+     */
+    public function isStaff(): bool
+    {
+        return $this->isReviewer() || $this->isAdmin();
+    }
+
     /**
      * `avatar` holds either an S3 key (password/self-uploaded avatars) or a
      * ready-made URL (Google profile photos) — resolve whichever it is.

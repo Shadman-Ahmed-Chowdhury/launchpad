@@ -76,3 +76,30 @@ export async function updateProductAction(
 
   redirect("/dashboard");
 }
+
+/**
+ * Submits a draft (or a product sent back for changes) into the reviewer
+ * queue. Bound to a slug the same way `updateProductAction` is.
+ */
+export async function submitProductAction(
+  slug: string,
+  // useActionState requires this signature; the button has nothing to submit.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _prevState: AuthFormState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _formData: FormData,
+): Promise<AuthFormState> {
+  const token = await getAuthToken();
+  if (!token) redirect("/login");
+
+  try {
+    await apiFetch(`/api/products/${slug}/submit`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    return { message: errorMessage(error, "Something went wrong submitting your product for review.") };
+  }
+
+  redirect("/dashboard");
+}

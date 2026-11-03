@@ -316,3 +316,64 @@ bottom. Don't delete old entries — mark them superseded instead.
   ADR-009/013 ranking, member voting) that can land as its own change without
   reshaping what's built here — `status`, `retracted_at`, and the resource shape are
   already in place for them.
+
+## ADR-025: Submit-for-review + reviewer approve/reject/changes-requested flow
+
+- **Date:** 2026-10-31
+- **Status:** Accepted
+- **Decision:** Builds the review half of ADR-024's deferral list.
+  - A founder submits a `draft` (or resubmits a `changes_requested` product) via
+    `POST /api/products/{slug}/submit`, which sets `status = pending_review` and a
+    new `submitted_at` timestamp (used to order the queue — `created_at` is
+    draft-creation time, not submission time).
+  - A new `ProductReviewController` under `/api/reviewer/products` gives
+    reviewers/admins the queue (`GET`, oldest `submitted_at` first) and three
+    decisions (`approve`, `reject`, `requestChanges`), each writing an immutable
+    `product_reviews` row (reviewer, action, notes) and an `audit_logs` row in one
+    transaction — both tables were already drafted in `docs/04-db-diagram.md` but
+    unbuilt until now.
+  - Status machine: `pending_review` → `approved` | `rejected` | `changes_requested`.
+    `changes_requested` lets the founder edit and resubmit (back to
+    `pending_review`); `rejected` is terminal — only "send back for changes" in the
+    brief implies a resubmission loop. A founder can't edit while `pending_review`
+    (new `ProductPolicy::update()` check), so a reviewer never reviews a moving
+    target.
+  - Role checks are plain `User::isReviewer()`/`isAdmin()`/`isStaff()` helpers plus
+    new `ProductPolicy` abilities (`submit`, `reviewAny`, `review`) — no new
+    middleware, same Policy-per-action pattern `update`/`delete` already used.
+  - The founder sees the outcome via a `latest_review` field added to
+    `ProductResource` (action + notes), visible only to the founder or staff — not
+    a real notification.
+- **Why:** ADR-024 explicitly deferred this; the brief requires every submission to
+  be reviewed before anything else can happen to it (launch scheduling, the front
+  page). Deliberately **out of scope** here: email/in-site notifications (no
+  notification infrastructure exists yet — building it now would be far more than
+  this slice needs; the dashboard's `latest_review` field covers "the founder is
+  told the outcome" well enough until that infrastructure lands) and launch-day
+  scheduling (what a founder does with an `approved` product — still ADR-024's
+  deferral, untouched here).
+
+## ADR-026: Admins provision reviewer accounts directly — no self-promotion path
+
+- **Date:** 2026-10-31
+- **Status:** Accepted
+- **Decision:** `POST /api/admin/reviewers` (admin-only, gated by a new
+  `UserPolicy::manageReviewers()` ability) creates a brand-new `User` with
+  `role = 'reviewer'` directly — same shape as `RegisterController` (first/last
+  name, email, password), but the admin sets the initial password and the
+  account is created with `email_verified_at` already set, skipping the public
+  email-verification flow (ADR-010) since the admin is vouching for the account.
+  `GET /api/admin/reviewers` lists existing reviewers. Both actions are
+  audit-logged (`create_reviewer`) per ADR-011. `role` stays out of `User`'s
+  `#[Fillable]` list, same as before — the new user is built with `forceFill()`
+  inside the controller, not by loosening mass-assignment guarding.
+  Frontend: `/staff/reviewers` (admin-only via a new `requireAdmin()` helper,
+  same 404-not-redirect pattern as `requireStaff()`) lists reviewers and has a
+  create form; linked from `/staff` only when `role === "admin"`.
+- **Why:** There's no public signup path to the reviewer role (nor should there
+  be — reviewers are internal staff), and no "promote an existing member"
+  listing/search feature exists or was asked for. Creating the account directly
+  is the smallest change that lets an admin actually produce a reviewer login
+  through the app instead of a one-off `tinker`/seeder call — the gap this ADR
+  closes is that ADR-025 added `isStaff()`/`isReviewer()` checks everywhere but
+  never gave anyone a way to become a reviewer in the first place.

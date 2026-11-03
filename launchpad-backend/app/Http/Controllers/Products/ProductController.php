@@ -39,7 +39,7 @@ class ProductController extends Controller
     {
         $products = $request->user()->products()
             ->withCount('votes')
-            ->with('topics')
+            ->with(['topics', 'latestReview'])
             ->latest()
             ->paginate();
 
@@ -56,7 +56,7 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->withCount('votes')
-            ->with('topics')
+            ->with(['topics', 'latestReview'])
             ->firstOrFail();
 
         $viewer = $request->user('sanctum');
@@ -134,5 +134,22 @@ class ProductController extends Controller
         $product->delete();
 
         return $this->respond(null, 'Product deleted.');
+    }
+
+    /**
+     * A founder submits their draft (or resubmits after changes were
+     * requested) into the reviewer queue (see ADR-025).
+     */
+    public function submit(string $slug): JsonResponse
+    {
+        $product = Product::where('slug', $slug)->firstOrFail();
+        $this->authorize('submit', $product);
+
+        $product->update([
+            'status' => 'pending_review',
+            'submitted_at' => now(),
+        ]);
+
+        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')), 'Product submitted for review.');
     }
 }

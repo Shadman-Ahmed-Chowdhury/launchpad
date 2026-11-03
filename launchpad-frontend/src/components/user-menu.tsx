@@ -8,7 +8,7 @@ import type { User } from "@/types";
 export function UserMenu({
   user,
 }: {
-  user: Pick<User, "firstName" | "handle">;
+  user: Pick<User, "firstName" | "handle" | "role">;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +40,7 @@ export function UserMenu({
     { href: "/dashboard", label: "Dashboard" },
     { href: `/profile/${user.handle}`, label: "Profile" },
     { href: "/settings", label: "Settings" },
+    ...(user.role !== "member" ? [{ href: "/staff", label: "Staff" }] : []),
   ];
 
   return (

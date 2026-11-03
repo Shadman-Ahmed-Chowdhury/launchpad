@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { requireUser } from "@/lib/auth";
 import { getMyProducts } from "@/lib/products";
 import { ResendVerificationButton } from "./resend-verification-button";
+import { SubmitForReviewButton } from "./submit-for-review-button";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -88,52 +89,65 @@ export default async function DashboardPage() {
           </p>
         ) : (
           <div className="mt-6 divide-y divide-hairline">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-5 py-5 first:pt-0 last:pb-0"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground font-display text-lg text-background">
-                  {product.name.charAt(0)}
-                </div>
+            {products.map((product) => {
+              const canEdit =
+                product.status === "draft" || product.status === "changes_requested";
+              const canSubmit = canEdit;
+              const showReviewNote =
+                (product.status === "rejected" || product.status === "changes_requested") &&
+                product.latestReview?.notes;
 
-                <div className="min-w-0 flex-1">
-                  {product.status === "launched" ? (
-                    <Link
-                      href={`/products/${product.slug}`}
-                      className="font-medium transition-colors hover:text-gold"
-                    >
-                      {product.name}
-                    </Link>
-                  ) : (
-                    <p className="font-medium">{product.name}</p>
-                  )}
-                  <p className="mt-0.5 truncate text-sm text-muted">
-                    {product.tagline}
-                  </p>
-                </div>
-
-                <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs text-muted">
-                  {STATUS_LABELS[product.status] ?? product.status}
-                </span>
-
-                {product.status === "draft" && (
-                  <Link
-                    href={`/dashboard/products/${product.slug}/edit`}
-                    className="shrink-0 text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground"
-                  >
-                    Edit
-                  </Link>
-                )}
-
-                <div className="w-14 shrink-0 text-right">
-                  <div className="font-display text-xl text-gold">
-                    {product.votesCount}
+              return (
+                <div key={product.id} className="flex items-center gap-5 py-5 first:pt-0 last:pb-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground font-display text-lg text-background">
+                    {product.name.charAt(0)}
                   </div>
-                  <div className="text-xs text-muted">votes</div>
+
+                  <div className="min-w-0 flex-1">
+                    {product.status === "launched" ? (
+                      <Link
+                        href={`/products/${product.slug}`}
+                        className="font-medium transition-colors hover:text-gold"
+                      >
+                        {product.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{product.name}</p>
+                    )}
+                    <p className="mt-0.5 truncate text-sm text-muted">
+                      {product.tagline}
+                    </p>
+                    {showReviewNote && (
+                      <p className="mt-1 text-sm text-danger">
+                        {product.latestReview!.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs text-muted">
+                    {STATUS_LABELS[product.status] ?? product.status}
+                  </span>
+
+                  {canEdit && (
+                    <Link
+                      href={`/dashboard/products/${product.slug}/edit`}
+                      className="shrink-0 text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground"
+                    >
+                      Edit
+                    </Link>
+                  )}
+
+                  {canSubmit && <SubmitForReviewButton slug={product.slug} />}
+
+                  <div className="w-14 shrink-0 text-right">
+                    <div className="font-display text-xl text-gold">
+                      {product.votesCount}
+                    </div>
+                    <div className="text-xs text-muted">votes</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
