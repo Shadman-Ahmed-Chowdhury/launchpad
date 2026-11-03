@@ -8,11 +8,13 @@ use App\Models\User;
 class ProductPolicy
 {
     /**
-     * A founder can only edit their own product.
+     * A founder can only edit their own product, and not while it's
+     * `pending_review` — a reviewer could be looking at it mid-queue (see
+     * ADR-025).
      */
     public function update(User $user, Product $product): bool
     {
-        return $user->is($product->founder);
+        return $user->is($product->founder) && $product->status !== 'pending_review';
     }
 
     /**
@@ -24,5 +26,34 @@ class ProductPolicy
     public function delete(User $user, Product $product): bool
     {
         return $user->is($product->founder) && $product->status === 'draft';
+    }
+
+    /**
+     * A founder can submit their own product for review from `draft`, or
+     * resubmit after `changes_requested` — not from any other status (see
+     * ADR-025's status machine).
+     */
+    public function submit(User $user, Product $product): bool
+    {
+        return $user->is($product->founder)
+            && in_array($product->status, ['draft', 'changes_requested'], true);
+    }
+
+    /**
+     * Gates the reviewer queue listing — any staff member (reviewer or
+     * admin) can see it.
+     */
+    public function reviewAny(User $user): bool
+    {
+        return $user->isStaff();
+    }
+
+    /**
+     * Gates approve/reject/request-changes — staff only, and only while the
+     * product is actually waiting in the queue.
+     */
+    public function review(User $user, Product $product): bool
+    {
+        return $user->isStaff() && $product->status === 'pending_review';
     }
 }

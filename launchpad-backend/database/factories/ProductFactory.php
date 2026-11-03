@@ -49,4 +49,15 @@ class ProductFactory extends Factory
             'launched_at' => $launchDate,
         ]);
     }
+
+    /**
+     * Indicate that the product is sitting in the reviewer queue.
+     */
+    public function pendingReview(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'pending_review',
+            'submitted_at' => now(),
+        ]);
+    }
 }

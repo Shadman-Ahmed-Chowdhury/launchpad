@@ -6,8 +6,10 @@ use App\Http\Controllers\Accounts\PasswordController;
 use App\Http\Controllers\Accounts\PasswordResetController;
 use App\Http\Controllers\Accounts\ProfileController;
 use App\Http\Controllers\Accounts\RegisterController;
+use App\Http\Controllers\Accounts\ReviewerController;
 use App\Http\Controllers\Accounts\SessionController;
 use App\Http\Controllers\Products\ProductController;
+use App\Http\Controllers\Products\ProductReviewController;
 use App\Http\Controllers\TopicController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,4 +47,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::patch('/products/{slug}', [ProductController::class, 'update']);
     Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
+    Route::post('/products/{slug}/submit', [ProductController::class, 'submit']);
+
+    Route::prefix('reviewer')->group(function () {
+        Route::get('/products', [ProductReviewController::class, 'index']);
+        Route::post('/products/{slug}/approve', [ProductReviewController::class, 'approve']);
+        Route::post('/products/{slug}/reject', [ProductReviewController::class, 'reject']);
+        Route::post('/products/{slug}/request-changes', [ProductReviewController::class, 'requestChanges']);
+    });
+
+    Route::prefix('admin')->group(function () {
+        Route::get('/reviewers', [ReviewerController::class, 'index']);
+        Route::post('/reviewers', [ReviewerController::class, 'store']);
+    });
 });

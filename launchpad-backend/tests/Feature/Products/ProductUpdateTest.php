@@ -33,6 +33,14 @@ it('lets a founder fully edit their own draft product', function () {
         ->assertJsonPath('data.tagline', 'New tagline');
 });
 
+it('blocks a founder from editing while the product is pending review', function () {
+    $founder = User::factory()->create();
+    $product = Product::factory()->pendingReview()->create(['founder_id' => $founder->id]);
+
+    $this->actingAs($founder)->patchJson("/api/products/{$product->slug}", ['name' => 'New name'])
+        ->assertForbidden();
+});
+
 it('restricts a founder to description/website_url once launched', function () {
     $founder = User::factory()->create();
     $product = Product::factory()->launched()->create([

@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-#[Fillable(['founder_id', 'name', 'slug', 'tagline', 'description', 'logo', 'website_url', 'status', 'launch_date', 'launched_at'])]
+#[Fillable(['founder_id', 'name', 'slug', 'tagline', 'description', 'logo', 'website_url', 'status', 'launch_date', 'launched_at', 'submitted_at'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -40,6 +41,25 @@ class Product extends Model
     public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
+    }
+
+    /**
+     * @return HasMany<ProductReview, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * The most recent reviewer decision, if any — powers the "told the
+     * outcome" founder-facing note on `ProductResource` (see ADR-025).
+     *
+     * @return HasOne<ProductReview, $this>
+     */
+    public function latestReview(): HasOne
+    {
+        return $this->hasOne(ProductReview::class)->latestOfMany();
     }
 
     /**

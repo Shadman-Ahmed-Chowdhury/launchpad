@@ -1,0 +1,106 @@
+"use client";
+
+import { useActionState } from "react";
+import { createReviewerAction } from "@/app/actions/admin";
+import type { AuthFormState } from "@/lib/action-state";
+
+export function CreateReviewerForm() {
+  const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
+    createReviewerAction,
+    undefined,
+  );
+
+  return (
+    <form action={formAction} className="mt-6 space-y-5">
+      {state?.message && <p className="text-sm text-danger">{state.message}</p>}
+
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label htmlFor="firstName" className="text-sm font-medium">
+            First name
+          </label>
+          <input
+            id="firstName"
+            name="firstName"
+            type="text"
+            required
+            className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors focus:border-gold"
+          />
+          {state?.errors?.first_name && (
+            <p className="mt-2 text-sm text-danger">{state.errors.first_name[0]}</p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label htmlFor="lastName" className="text-sm font-medium">
+            Last name
+          </label>
+          <input
+            id="lastName"
+            name="lastName"
+            type="text"
+            required
+            className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors focus:border-gold"
+          />
+          {state?.errors?.last_name && (
+            <p className="mt-2 text-sm text-danger">{state.errors.last_name[0]}</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="email" className="text-sm font-medium">
+          Email
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors focus:border-gold"
+        />
+        {state?.errors?.email && (
+          <p className="mt-2 text-sm text-danger">{state.errors.email[0]}</p>
+        )}
+      </div>
+
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label htmlFor="password" className="text-sm font-medium">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            placeholder="At least 8 characters"
+            className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors placeholder:text-muted focus:border-gold"
+          />
+          {state?.errors?.password && (
+            <p className="mt-2 text-sm text-danger">{state.errors.password[0]}</p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label htmlFor="passwordConfirmation" className="text-sm font-medium">
+            Confirm password
+          </label>
+          <input
+            id="passwordConfirmation"
+            name="passwordConfirmation"
+            type="password"
+            required
+            className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors focus:border-gold"
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-full bg-gold-fill px-6 py-2.5 text-sm font-medium text-background transition-colors hover:bg-gold-fill/90 disabled:opacity-60"
+      >
+        {pending ? "Creating…" : "Create reviewer"}
+      </button>
+    </form>
+  );
+}

@@ -41,10 +41,25 @@ export type ProductStatus =
   | "launched"
   | "taken_down";
 
+export interface ProductFounder {
+  id: number;
+  name: string;
+  handle: string;
+}
+
+/**
+ * The reviewer's most recent decision on a product — only present for the
+ * founder or staff (see ProductResource on the backend).
+ */
+export interface ProductReview {
+  action: ProductStatus;
+  notes: string | null;
+  createdAt: string;
+}
+
 /**
  * Shape used by the products list/detail/dashboard pages (see
- * src/lib/products.ts). Founder isn't included yet — add it once a product
- * page needs to show who submitted it.
+ * src/lib/products.ts).
  */
 export interface Product {
   id: number;
@@ -58,6 +73,9 @@ export interface Product {
   status: ProductStatus;
   votesCount: number;
   launchDate: string | null;
+  submittedAt: string | null;
+  founder?: ProductFounder;
+  latestReview?: ProductReview;
 }
 
 export interface Topic {

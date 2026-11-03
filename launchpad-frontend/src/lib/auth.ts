@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { getAuthToken } from "@/lib/session";
 import type { AuthProvider, User, UserLink, UserRole } from "@/types";
@@ -72,6 +72,37 @@ export async function requireUser(redirectTo: string): Promise<User> {
 
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(redirectTo)}`);
+  }
+
+  return user;
+}
+
+/**
+ * Use in Server Components for staff-only routes (reviewer or admin) — a
+ * signed-out visitor is redirected to log in, but a signed-in member who
+ * isn't staff gets a 404 instead of a redirect, so `/staff` doesn't reveal
+ * it exists to someone who can't use it.
+ */
+export async function requireStaff(redirectTo: string): Promise<User> {
+  const user = await requireUser(redirectTo);
+
+  if (user.role === "member") {
+    notFound();
+  }
+
+  return user;
+}
+
+/**
+ * Use in Server Components for admin-only routes — same 404-not-redirect
+ * reasoning as `requireStaff()`, but for `role === "admin"` specifically
+ * (creating reviewer accounts is admin-only, see ADR-026).
+ */
+export async function requireAdmin(redirectTo: string): Promise<User> {
+  const user = await requireUser(redirectTo);
+
+  if (user.role !== "admin") {
+    notFound();
   }
 
   return user;
