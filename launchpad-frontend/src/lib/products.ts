@@ -2,6 +2,21 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 import { getAuthToken } from "@/lib/session";
 import type { Product, ProductStatus, Topic } from "@/types";
 
+/**
+ * Shared by the products list and detail pages so a status reads the same
+ * in both places.
+ */
+export const STATUS_LABELS: Record<ProductStatus, string> = {
+  draft: "Draft",
+  pending_review: "Pending review",
+  changes_requested: "Changes requested",
+  rejected: "Rejected",
+  approved: "Approved",
+  scheduled: "Scheduled",
+  launched: "Launched",
+  taken_down: "Taken down",
+};
+
 interface RawProductFounder {
   id: number;
   name: string;
@@ -128,11 +143,12 @@ export async function getTopics(): Promise<Topic[]> {
 }
 
 /**
- * A product the signed-in founder owns, any status — powers the edit page.
- * Unlike `getProductBySlug()`, this sends the founder's token so a draft
- * (not yet public) can be previewed/edited by its own founder.
+ * A product the signed-in founder owns, any status — powers the dashboard
+ * product detail and edit pages. Unlike `getProductBySlug()`, this sends
+ * the founder's token so a draft (not yet public) can be previewed/edited
+ * by its own founder.
  */
-export async function getProductForEdit(
+export async function getMyProductBySlug(
   slug: string,
 ): Promise<Product | undefined> {
   const token = await getAuthToken();

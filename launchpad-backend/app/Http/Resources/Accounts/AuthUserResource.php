@@ -23,6 +23,7 @@ class AuthUserResource extends JsonResource
             'bio' => $this->bio,
             'avatar_url' => $this->avatarUrl(),
             'email_verified' => $this->hasVerifiedEmail(),
+            'is_suspended' => $this->is_suspended,
             'links' => UserLinkResource::collection($this->whenLoaded('links')),
             'created_at' => $this->created_at,
         ];

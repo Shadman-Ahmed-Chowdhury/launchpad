@@ -35,7 +35,7 @@ export async function createProductAction(
     return { message: errorMessage(error, "Something went wrong submitting your product.") };
   }
 
-  redirect("/dashboard");
+  redirect("/dashboard/products");
 }
 
 /**
@@ -74,13 +74,40 @@ export async function updateProductAction(
     return { message: errorMessage(error, "Something went wrong saving your product.") };
   }
 
-  redirect("/dashboard");
+  redirect(`/dashboard/products/${slug}`);
 }
 
 /**
  * Submits a draft (or a product sent back for changes) into the reviewer
  * queue. Bound to a slug the same way `updateProductAction` is.
  */
+/**
+ * Picks (or changes) a product's launch day, once it's `approved` (see
+ * ADR-027). Bound to a slug the same way `updateProductAction` is.
+ */
+export async function scheduleLaunchAction(
+  slug: string,
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const token = await getAuthToken();
+  if (!token) redirect("/login");
+
+  try {
+    await apiFetch(`/api/products/${slug}/schedule`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ launch_date: formData.get("launchDate") }),
+    });
+  } catch (error) {
+    const errors = fieldErrors(error);
+    if (errors) return { errors };
+    return { message: errorMessage(error, "Something went wrong setting your launch day.") };
+  }
+
+  redirect("/dashboard/products");
+}
+
 export async function submitProductAction(
   slug: string,
   // useActionState requires this signature; the button has nothing to submit.
@@ -101,5 +128,5 @@ export async function submitProductAction(
     return { message: errorMessage(error, "Something went wrong submitting your product for review.") };
   }
 
-  redirect("/dashboard");
+  redirect("/dashboard/products");
 }

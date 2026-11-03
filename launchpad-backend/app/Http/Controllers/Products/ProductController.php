@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Products;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Products\ScheduleProductRequest;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\Products\ProductResource;
@@ -134,6 +135,24 @@ class ProductController extends Controller
         $product->delete();
 
         return $this->respond(null, 'Product deleted.');
+    }
+
+    /**
+     * A founder picks (or changes) their approved product's launch day,
+     * limited to a set number of launches per day (see docs/02-features.md,
+     * ADR-027).
+     */
+    public function scheduleLaunch(ScheduleProductRequest $request, string $slug): JsonResponse
+    {
+        $product = Product::where('slug', $slug)->firstOrFail();
+        $this->authorize('schedule', $product);
+
+        $product->update([
+            'status' => 'scheduled',
+            'launch_date' => $request->validated('launch_date'),
+        ]);
+
+        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')), 'Launch day set.');
     }
 
     /**

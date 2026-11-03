@@ -53,11 +53,11 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 ## Admin (staff)
 
 - Everything a Reviewer can do, plus:
-- Can suspend a member
+- Can see a list of members and suspend/unsuspend one
 - Can take down a product
 - Can feature a product on the front page
 - Can view the full audit log (who did what, when)
-- Can create a reviewer account directly (no public signup path to that role) and see the list of current reviewers
+- Can create a reviewer account directly (no public signup path to that role), see the list of current reviewers, edit one, or revoke their reviewer access (revoking returns the account to a plain member, it isn't deleted — keeps their past review/audit history intact)
 
 ## Not in this version
 

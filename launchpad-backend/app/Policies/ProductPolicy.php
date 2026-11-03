@@ -40,6 +40,17 @@ class ProductPolicy
     }
 
     /**
+     * A founder can pick a launch day once their product is `approved`, and
+     * change it again while it's `scheduled` — not before approval, and not
+     * once it has actually `launched` (see docs/02-features.md, ADR-027).
+     */
+    public function schedule(User $user, Product $product): bool
+    {
+        return $user->is($product->founder)
+            && in_array($product->status, ['approved', 'scheduled'], true);
+    }
+
+    /**
      * Gates the reviewer queue listing — any staff member (reviewer or
      * admin) can see it.
      */
