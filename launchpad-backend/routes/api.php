@@ -8,6 +8,7 @@ use App\Http\Controllers\Accounts\ProfileController;
 use App\Http\Controllers\Accounts\RegisterController;
 use App\Http\Controllers\Accounts\ReviewerController;
 use App\Http\Controllers\Accounts\SessionController;
+use App\Http\Controllers\Accounts\UserController;
 use App\Http\Controllers\Products\ProductController;
 use App\Http\Controllers\Products\ProductReviewController;
 use App\Http\Controllers\TopicController;
@@ -48,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/products/{slug}', [ProductController::class, 'update']);
     Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
     Route::post('/products/{slug}/submit', [ProductController::class, 'submit']);
+    Route::post('/products/{slug}/schedule', [ProductController::class, 'scheduleLaunch']);
 
     Route::prefix('reviewer')->group(function () {
         Route::get('/products', [ProductReviewController::class, 'index']);
@@ -59,5 +61,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/reviewers', [ReviewerController::class, 'index']);
         Route::post('/reviewers', [ReviewerController::class, 'store']);
+        Route::patch('/reviewers/{id}', [ReviewerController::class, 'update']);
+        Route::delete('/reviewers/{id}', [ReviewerController::class, 'destroy']);
+
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users/{id}/suspend', [UserController::class, 'suspend']);
+        Route::post('/users/{id}/unsuspend', [UserController::class, 'unsuspend']);
     });
 });

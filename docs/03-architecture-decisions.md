@@ -377,3 +377,59 @@ bottom. Don't delete old entries — mark them superseded instead.
   through the app instead of a one-off `tinker`/seeder call — the gap this ADR
   closes is that ADR-025 added `isStaff()`/`isReviewer()` checks everywhere but
   never gave anyone a way to become a reviewer in the first place.
+
+## ADR-027: Launch-day scheduling as its own endpoint, with a per-day slot cap
+
+- **Date:** 2026-11-04
+- **Status:** Accepted
+- **Decision:** Builds the launch-scheduling half of ADR-024's deferral list.
+  `POST /api/products/{slug}/schedule` (`ProductController::scheduleLaunch()`)
+  lets a founder set/change `launch_date` on their own product. New
+  `ProductPolicy::schedule()` only allows this while `status` is `approved`
+  or `scheduled` — not before approval, not once `launched`. A new
+  `ScheduleProductRequest` validates `launch_date` is a real, non-past date,
+  and its `after()` hook rejects the date if the number of other products
+  already `scheduled`/`launched` on it has reached `config('launchpad.max_
+  launches_per_day')` (default 2, env `LAUNCH_SLOTS_PER_DAY` — see
+  docs/01-client-brief.md "two to start with"). On success the product's
+  `status` moves to `scheduled` — the first time anything in the codebase
+  actually writes that status.
+- **Why:** Kept separate from the generic `PATCH /api/products/{slug}`
+  (`update()`/`UpdateProductRequest`) instead of adding `launch_date` to that
+  endpoint's rules — picking a launch day is its own action with its own
+  status transition and its own cross-record cap check, the same reasoning
+  ADR-025 used to give submit/approve/reject their own endpoints rather than
+  folding them into `update()`. The slot-cap check lives in the Form
+  Request's `after()` hook rather than the controller, matching how
+  `UpdateProfileRequest`/other requests already express cross-field/DB-
+  dependent rules, and keeps the error on the standard ADR-022 validation
+  envelope (`{"errors": {"launch_date": [...]}}`) instead of a one-off shape.
+
+## ADR-028: Admin member suspend/unsuspend, and reviewer edit/revoke (not delete)
+
+- **Date:** 2026-11-04
+- **Status:** Accepted
+- **Decision:** Two small additions to staff account management, both
+  audit-logged per ADR-011:
+  - `GET /api/admin/users` lists plain members (`UserController::index()`,
+    gated by new `UserPolicy::manageMembers()`); `POST .../suspend` and
+    `.../unsuspend` flip `is_suspended` (gated by new `UserPolicy::suspend()`,
+    which refuses a target that `isStaff()` or is the admin themselves).
+    `is_suspended` stays outside `User`'s `#[Fillable]` allowlist (same as
+    `role`), so both actions write it with `forceFill()`, not a mass-assigned
+    `update()`.
+  - `ReviewerController::update()`/`destroy()` complete the reviewer CRUD
+    ADR-026 only took to create+list. `destroy()` **revokes** reviewer
+    access by setting `role` back to `member` — it does not delete the
+    `User` row.
+- **Why:** `is_suspended` and the `suspended()` factory state already
+  existed (docs/02-features.md's "can suspend a member" was already
+  scoped), just with no API/UI to reach them — this closes that gap, the
+  same shape of gap ADR-026 closed for reviewer creation. Hard-deleting a
+  reviewer would either cascade-delete or orphan their `product_reviews`
+  and `audit_logs` rows (`reviewer_id`/`actor_id` FKs) — exactly what the
+  brief's "a record of every action our staff took... we will be asked
+  about this" rules out. Reverting `role` to `member` keeps that history
+  attached to a real account while removing their staff access, the same
+  soft-removal instinct behind `votes.retracted_at` (ADR-014) and
+  `is_suspended` itself rather than a hard delete.
