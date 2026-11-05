@@ -72,6 +72,7 @@ export interface Product {
   websiteUrl: string;
   status: ProductStatus;
   votesCount: number;
+  votedByViewer: boolean;
   launchDate: string | null;
   submittedAt: string | null;
   founder?: ProductFounder;

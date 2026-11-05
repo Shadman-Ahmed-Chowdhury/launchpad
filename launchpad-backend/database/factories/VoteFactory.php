@@ -25,4 +25,14 @@ class VoteFactory extends Factory
             'retracted_at' => null,
         ];
     }
+
+    /**
+     * Indicate that the member has taken this vote back (see ADR-014).
+     */
+    public function retracted(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'retracted_at' => now(),
+        ]);
+    }
 }

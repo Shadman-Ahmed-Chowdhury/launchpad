@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { HeroIllustration } from "@/components/hero-illustration";
 import { ProductCard } from "@/components/product-card";
+import { getCurrentUser } from "@/lib/auth";
 import { getProducts } from "@/lib/products";
 
 const steps = [
@@ -39,7 +40,7 @@ const roles = [
 ];
 
 export default async function Home() {
-  const products = await getProducts();
+  const [products, currentUser] = await Promise.all([getProducts(), getCurrentUser()]);
   const todaysLaunches = products.slice(0, 4);
 
   return (
@@ -99,6 +100,7 @@ export default async function Home() {
                     key={product.id}
                     product={product}
                     rank={index + 1}
+                    currentUserId={currentUser?.id}
                   />
                 ))}
               </div>

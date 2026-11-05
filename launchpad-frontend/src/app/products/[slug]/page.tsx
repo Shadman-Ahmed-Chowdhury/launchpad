@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { VoteButton } from "@/components/vote-button";
+import { getCurrentUser } from "@/lib/auth";
 import { getProductBySlug } from "@/lib/products";
 
 export default async function ProductPage({
@@ -9,11 +11,18 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, currentUser] = await Promise.all([
+    getProductBySlug(slug),
+    getCurrentUser(),
+  ]);
 
   if (!product) {
     notFound();
   }
+
+  const isOwnProduct = Boolean(
+    currentUser && product.founder && product.founder.id === currentUser.id,
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -43,12 +52,12 @@ export default async function ProductPage({
           </p>
 
           <div className="mt-10 flex items-center gap-8 border-t border-hairline pt-8">
-            <div>
-              <div className="font-display text-3xl text-gold">
-                {product.votesCount}
-              </div>
-              <div className="text-xs text-muted">votes</div>
-            </div>
+            <VoteButton
+              slug={product.slug}
+              votesCount={product.votesCount}
+              votedByViewer={product.votedByViewer}
+              disabled={isOwnProduct}
+            />
             <a
               href={product.websiteUrl}
               target="_blank"

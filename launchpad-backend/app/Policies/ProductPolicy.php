@@ -51,6 +51,28 @@ class ProductPolicy
     }
 
     /**
+     * A member can vote once a product is `launched`, not on their own
+     * product, only once their email is verified (ADR-010/020), and only
+     * while they don't already have an active vote on it (see
+     * docs/01-client-brief.md "Voting and comments").
+     */
+    public function vote(User $user, Product $product): bool
+    {
+        return $product->status === 'launched'
+            && ! $user->is($product->founder)
+            && $user->hasVerifiedEmail()
+            && ! $product->activeVotes()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * A member can only take back their own active vote.
+     */
+    public function unvote(User $user, Product $product): bool
+    {
+        return $product->activeVotes()->where('user_id', $user->id)->exists();
+    }
+
+    /**
      * Gates the reviewer queue listing — any staff member (reviewer or
      * admin) can see it.
      */

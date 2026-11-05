@@ -12,6 +12,7 @@ use App\Http\Controllers\Accounts\UserController;
 use App\Http\Controllers\Products\ProductController;
 use App\Http\Controllers\Products\ProductReviewController;
 use App\Http\Controllers\TopicController;
+use App\Http\Controllers\Votes\VoteController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -50,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
     Route::post('/products/{slug}/submit', [ProductController::class, 'submit']);
     Route::post('/products/{slug}/schedule', [ProductController::class, 'scheduleLaunch']);
+    Route::post('/products/{slug}/votes', [VoteController::class, 'store'])->middleware('throttle:voting');
+    Route::delete('/products/{slug}/votes', [VoteController::class, 'destroy'])->middleware('throttle:voting');
 
     Route::prefix('reviewer')->group(function () {
         Route::get('/products', [ProductReviewController::class, 'index']);

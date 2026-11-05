@@ -44,6 +44,18 @@ class Product extends Model
     }
 
     /**
+     * Votes that haven't been retracted — what `votes_count` should always
+     * be counted from, and what the vote/unvote policy checks against (see
+     * ADR-014, ADR-029).
+     *
+     * @return HasMany<Vote, $this>
+     */
+    public function activeVotes(): HasMany
+    {
+        return $this->hasMany(Vote::class)->whereNull('retracted_at');
+    }
+
+    /**
      * @return HasMany<ProductReview, $this>
      */
     public function reviews(): HasMany

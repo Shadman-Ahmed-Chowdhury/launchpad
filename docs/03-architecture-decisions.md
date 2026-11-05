@@ -433,3 +433,52 @@ bottom. Don't delete old entries — mark them superseded instead.
   attached to a real account while removing their staff access, the same
   soft-removal instinct behind `votes.retracted_at` (ADR-014) and
   `is_suspended` itself rather than a hard delete.
+
+## ADR-029: Vote-casting/retraction endpoint, and ADR-014's partial unique index emulated with a generated column (resolves the deferral in ADR-024/ADR-014)
+
+- **Date:** 2026-11-05
+- **Status:** Accepted
+- **Decision:** Builds the vote-casting/retraction half of ADR-024's
+  deferral list.
+  - `POST /api/products/{slug}/votes` (`VoteController::store()`) and
+    `DELETE /api/products/{slug}/votes` (`::destroy()`), both behind
+    `auth:sanctum` and a new `voting` rate limiter (20/minute per user —
+    AGENTS.md flags vote manipulation as an explicit risk). A new
+    `ProductPolicy::vote()`/`unvote()` pair gates them: not the founder, the
+    product is `launched`, the member's email is verified (ADR-010/020),
+    and they don't already have an active vote (for `vote()`) / do have one
+    (for `unvote()`).
+  - ADR-014 called for "unique among active votes only", but MySQL (ADR-016)
+    has no partial/filtered unique index the way Postgres does. Resolved
+    with a generated column, `votes.active_user_id`
+    (`case when retracted_at is null then user_id else null end`), and a
+    unique index on `(product_id, active_user_id)` — a unique index allows
+    any number of `NULL`s, so retracted votes (where the generated column is
+    `NULL`) never collide, but at most one active vote per member per
+    product can exist. Retracting still only sets `retracted_at` (never
+    deletes the row, per ADR-014); recasting after a retraction inserts a
+    new row rather than reusing the old one, keeping the vote/retract/recast
+    pattern intact as a future anti-abuse signal.
+  - `votes_count` (wherever `ProductResource` reports it) now counts only
+    active votes (`Product::activeVotes()`, `whereNull('retracted_at')`)
+    instead of every row ever inserted — without this, retracting a vote
+    wouldn't visibly change the count, which is the whole point of "members
+    can remove their vote."
+  - `ProductResource` gained `voted_by_viewer`, populated only where the
+    controller eager-loaded `activeVotes` scoped to the viewer (`index()`,
+    `show()`, and the vote endpoints themselves) — true N+1 avoidance
+    instead of a per-product query. This also surfaced that
+    `isFounderOrStaff`/`latest_review` read `$request->user()` (default
+    `web` guard), which never resolves on `index()`/`show()` since neither
+    route carries `auth:sanctum` middleware to flip the default guard to
+    `sanctum` — fixed alongside this change to `$request->user('sanctum')`,
+    the same explicit-guard pattern `ProductController::show()` already used
+    for its own optional-auth check.
+- **Why:** ADR-024 explicitly deferred vote casting until real products
+  existed to vote on; they now do (ADR-025/027). Rate-limiting and the
+  verified-email gate are the other anti-abuse layers AGENTS.md calls for
+  alongside the vote/retract history ADR-014 already preserves. Real-time
+  vote-count updates (the brief's "no refreshing") stay out of scope here —
+  Pusher/broadcasting isn't wired into any flow yet, and wiring up the
+  real-time layer is a separate, already-flagged piece of work (ADR-004/019),
+  not something this endpoint needs to add on its own.
