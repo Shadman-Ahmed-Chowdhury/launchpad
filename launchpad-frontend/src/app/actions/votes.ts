@@ -32,17 +32,19 @@ export async function castVoteAction(
   const token = await getAuthToken();
   if (!token) redirect(`/login?next=${encodeURIComponent(`/products/${slug}`)}`);
 
+  let message = "Vote cast.";
   try {
-    await apiFetch(`/api/products/${slug}/votes`, {
+    const response = await apiFetch<{ message: string | null }>(`/api/products/${slug}/votes`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
+    message = response.message ?? message;
   } catch (error) {
     return { message: errorMessage(error, "Something went wrong casting your vote.") };
   }
 
   revalidateVoteSurfaces(slug);
-  return undefined;
+  return { message, success: true };
 }
 
 export async function retractVoteAction(
@@ -55,15 +57,17 @@ export async function retractVoteAction(
   const token = await getAuthToken();
   if (!token) redirect(`/login?next=${encodeURIComponent(`/products/${slug}`)}`);
 
+  let message = "Vote removed.";
   try {
-    await apiFetch(`/api/products/${slug}/votes`, {
+    const response = await apiFetch<{ message: string | null }>(`/api/products/${slug}/votes`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
+    message = response.message ?? message;
   } catch (error) {
     return { message: errorMessage(error, "Something went wrong removing your vote.") };
   }
 
   revalidateVoteSurfaces(slug);
-  return undefined;
+  return { message, success: true };
 }

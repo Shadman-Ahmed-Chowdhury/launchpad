@@ -5,11 +5,16 @@ import { ApiError } from "@/lib/api-client";
  * any "use server" file — Next.js requires every export of a "use server"
  * module to be an async Server Action itself, so these plain helpers can't
  * live in src/app/actions/*.ts alongside the actions that use them.
+ *
+ * `success` is optional and only meaningful to callers that surface the
+ * result as a toast (see `VoteButton` + `useToast()`) — forms that just
+ * render `state?.message`/`state?.errors` inline can ignore it.
  */
 export type AuthFormState =
   | {
       errors?: Record<string, string[]>;
       message?: string;
+      success?: boolean;
     }
   | undefined;
 

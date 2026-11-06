@@ -1,6 +1,14 @@
 import Link from "next/link";
+import { CommentIcon } from "@/components/icons";
 import { VoteButton } from "@/components/vote-button";
 import type { Product } from "@/types";
+
+/**
+ * Comments aren't a built feature yet (see docs/02-features.md) — this is a
+ * placeholder count matching the two dummy comments shown on every product
+ * page, just so the list reads the way Product Hunt's does.
+ */
+const DUMMY_COMMENT_COUNT = 2;
 
 export function ProductCard({
   product,
@@ -12,7 +20,8 @@ export function ProductCard({
   currentUserId?: number;
 }) {
   const dark = product.id % 2 === 0;
-  const isOwnProduct = currentUserId !== undefined && product.founder?.id === currentUserId;
+  const isLoggedIn = currentUserId !== undefined;
+  const isOwnProduct = isLoggedIn && product.founder?.id === currentUserId;
 
   return (
     <div className="flex items-center gap-5 py-6 first:pt-0 last:pb-0">
@@ -44,12 +53,22 @@ export function ProductCard({
         </div>
       </Link>
 
-      <VoteButton
-        slug={product.slug}
-        votesCount={product.votesCount}
-        votedByViewer={product.votedByViewer}
-        disabled={isOwnProduct}
-      />
+      <div className="flex shrink-0 items-center gap-2">
+        <VoteButton
+          slug={product.slug}
+          votesCount={product.votesCount}
+          votedByViewer={product.votedByViewer}
+          disabled={isOwnProduct}
+          readOnly={!isLoggedIn}
+        />
+        <Link
+          href={`/products/${product.slug}#comments`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-gold hover:text-gold"
+        >
+          <CommentIcon className="h-4 w-4" />
+          {DUMMY_COMMENT_COUNT}
+        </Link>
+      </div>
     </div>
   );
 }

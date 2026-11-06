@@ -14,7 +14,9 @@ it('rejects retracting a vote that does not exist', function () {
     $member = User::factory()->create();
     $product = Product::factory()->launched()->create();
 
-    $this->actingAs($member)->deleteJson("/api/products/{$product->slug}/votes")->assertForbidden();
+    $this->actingAs($member)->deleteJson("/api/products/{$product->slug}/votes")
+        ->assertForbidden()
+        ->assertJsonPath('message', "You haven't voted on this product.");
 });
 
 it('rejects retracting someone else\'s vote', function () {
@@ -23,7 +25,9 @@ it('rejects retracting someone else\'s vote', function () {
     $product = Product::factory()->launched()->create();
     Vote::factory()->create(['product_id' => $product->id, 'user_id' => $voter->id]);
 
-    $this->actingAs($other)->deleteJson("/api/products/{$product->slug}/votes")->assertForbidden();
+    $this->actingAs($other)->deleteJson("/api/products/{$product->slug}/votes")
+        ->assertForbidden()
+        ->assertJsonPath('message', "You haven't voted on this product.");
 });
 
 it('lets a member take back their own vote', function () {
