@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
+import { Avatar } from "@/components/avatar";
 import type { User } from "@/types";
 
 export function UserMenu({
   user,
 }: {
-  user: Pick<User, "firstName" | "handle" | "role">;
+  user: Pick<User, "firstName" | "handle" | "role" | "avatarUrl">;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,9 +53,7 @@ export function UserMenu({
         aria-expanded={open}
         className="flex items-center gap-2 rounded-full border border-hairline py-1.5 pl-1.5 pr-3 transition-colors hover:border-foreground"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-fill text-xs font-medium text-background">
-          {user.firstName.charAt(0)}
-        </span>
+        <Avatar src={user.avatarUrl} alt={user.firstName} size={24} />
         <span className="text-sm font-medium">{user.firstName}</span>
         <svg
           viewBox="0 0 12 12"

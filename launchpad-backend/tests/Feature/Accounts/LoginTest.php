@@ -37,6 +37,17 @@ it('rejects a login attempt for a google-only account', function () {
     $response->assertUnprocessable()->assertJsonValidationErrors('email');
 });
 
+it('rejects a login attempt for an unverified account', function () {
+    User::factory()->unverified()->create(['email' => 'amina@example.com']);
+
+    $response = $this->postJson('/api/auth/login', [
+        'email' => 'amina@example.com',
+        'password' => 'password',
+    ]);
+
+    $response->assertUnprocessable()->assertJsonValidationErrors('email');
+});
+
 it('rejects a login attempt for a suspended account', function () {
     User::factory()->suspended()->create([
         'email' => 'amina@example.com',

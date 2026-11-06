@@ -15,6 +15,12 @@ export type AuthFormState =
       errors?: Record<string, string[]>;
       message?: string;
       success?: boolean;
+      /**
+       * Set by `loginAction` when the rejection was specifically an
+       * unverified email, so the login form can offer to resend the
+       * confirmation email for the address that was just submitted.
+       */
+      unverifiedEmail?: string;
     }
   | undefined;
 

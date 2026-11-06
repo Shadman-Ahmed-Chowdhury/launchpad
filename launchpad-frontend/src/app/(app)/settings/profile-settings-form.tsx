@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateProfileAction } from "@/app/actions/profile";
+import { Avatar } from "@/components/avatar";
 import type { AuthFormState } from "@/lib/action-state";
 import type { User, UserLink } from "@/types";
 
@@ -13,6 +14,12 @@ export function ProfileSettingsForm({ user }: { user: User }) {
   const [links, setLinks] = useState<Omit<UserLink, "id">[]>(
     user.links.map(({ label, url }) => ({ label, url })),
   );
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl);
+
+  function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setAvatarPreview(file ? URL.createObjectURL(file) : user.avatarUrl);
+  }
 
   function updateLink(index: number, field: "label" | "url", value: string) {
     setLinks((current) =>
@@ -31,6 +38,30 @@ export function ProfileSettingsForm({ user }: { user: User }) {
           {state.message === "saved" ? "Profile saved." : state.message}
         </p>
       )}
+
+      <div className="flex items-center gap-4">
+        <Avatar src={avatarPreview} alt={user.firstName} size={64} />
+        <div>
+          <label
+            htmlFor="avatar"
+            className="inline-block cursor-pointer text-sm font-medium text-foreground underline underline-offset-4 hover:text-gold"
+          >
+            Upload photo
+          </label>
+          <input
+            id="avatar"
+            name="avatar"
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+          <p className="mt-1 text-xs text-muted">JPG or PNG, up to 2MB.</p>
+          {state?.errors?.avatar && (
+            <p className="mt-1 text-sm text-danger">{state.errors.avatar[0]}</p>
+          )}
+        </div>
+      </div>
 
       <div className="flex gap-4">
         <div className="flex-1">

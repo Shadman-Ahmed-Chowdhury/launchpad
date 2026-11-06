@@ -17,12 +17,20 @@ function safeNext(next: FormDataEntryValue | null): string {
   return value.startsWith("/") ? value : "/";
 }
 
+/**
+ * Exact text of `SessionController::store()`'s unverified-email rejection
+ * (see ADR-030) — matched here so the login form can offer a resend action
+ * instead of just showing the error as plain text.
+ */
+const UNVERIFIED_EMAIL_MESSAGE =
+  "Please verify your email before signing in. Check your inbox for the confirmation link.";
+
 export async function registerAction(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
   try {
-    const { data } = await apiFetch<{ data: AuthPayload }>("/api/auth/register", {
+    await apiFetch("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({
         first_name: formData.get("firstName"),
@@ -32,15 +40,15 @@ export async function registerAction(
         password_confirmation: formData.get("passwordConfirmation"),
       }),
     });
-
-    await setAuthToken(data.token);
   } catch (error) {
     const errors = fieldErrors(error);
     if (errors) return { errors };
     return { message: errorMessage(error, "Something went wrong creating your account.") };
   }
 
-  redirect("/");
+  // No session is issued on register (see ADR-030) — login is blocked until
+  // the email is verified, so there's nothing to log the user into yet.
+  redirect("/login?registered=1");
 }
 
 export async function loginAction(
@@ -48,12 +56,13 @@ export async function loginAction(
   formData: FormData,
 ): Promise<AuthFormState> {
   const next = safeNext(formData.get("next"));
+  const email = formData.get("email");
 
   try {
     const { data } = await apiFetch<{ data: AuthPayload }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({
-        email: formData.get("email"),
+        email,
         password: formData.get("password"),
       }),
     });
@@ -61,6 +70,9 @@ export async function loginAction(
     await setAuthToken(data.token);
   } catch (error) {
     const errors = fieldErrors(error);
+    if (errors?.email?.[0] === UNVERIFIED_EMAIL_MESSAGE) {
+      return { errors, unverifiedEmail: typeof email === "string" ? email : undefined };
+    }
     if (errors) return { errors };
     return { message: errorMessage(error, "Something went wrong signing you in.") };
   }
@@ -139,22 +151,19 @@ export async function verifyEmailAction(token: string): Promise<{ success: boole
   }
 }
 
-export async function resendVerificationAction(
-  // useActionState requires this signature; the button has nothing to submit.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _prevState: AuthFormState,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _formData: FormData,
-): Promise<AuthFormState> {
-  const token = await getAuthToken();
-  if (!token) redirect("/login");
-
+/**
+ * Resend the verification email for an address that isn't signed in yet —
+ * the only case that matters now that login is blocked pre-verification
+ * (see ADR-030). Called from the login form when a login attempt comes back
+ * "unverified".
+ */
+export async function resendVerificationByEmailAction(email: string): Promise<{ message: string }> {
   try {
     const { message } = await apiFetch<{ message: string | null }>("/api/auth/email/verify/resend", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email }),
     });
-    return { message: message ?? "Verification email sent." };
+    return { message: message ?? "If that account exists and needs verifying, we sent a new email." };
   } catch (error) {
     return { message: errorMessage(error, "Something went wrong. Try again.") };
   }

@@ -79,6 +79,23 @@ export interface Product {
   latestReview?: ProductReview;
 }
 
+/**
+ * A member's public profile — matches PublicProfileResource. Separate from
+ * `User` (the authenticated member's own account): no email, no auth
+ * provider, nothing private.
+ */
+export interface PublicProfile {
+  handle: string;
+  firstName: string;
+  lastName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  links: UserLink[];
+  memberSince: string;
+  productsCount: number;
+  votesReceivedCount: number;
+}
+
 export interface Topic {
   id: number;
   name: string;

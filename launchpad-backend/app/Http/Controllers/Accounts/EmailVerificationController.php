@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Accounts;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuthToken;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -11,17 +12,27 @@ use Illuminate\Validation\ValidationException;
 class EmailVerificationController extends Controller
 {
     /**
-     * Resend the verification email to the authenticated user.
+     * Resend the verification email. Public (no auth) — since login is now
+     * blocked until the email is verified (see ADR-030), a password-account
+     * user who still needs this can't be signed in to ask for it. Looks the
+     * user up by `email` instead when there's no Bearer-token caller, and
+     * always responds the same way so this can't be used to enumerate
+     * accounts (same pattern as PasswordResetController::store()).
      */
     public function send(Request $request): JsonResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return $this->respond(message: 'Email already verified.');
+        $user = $request->user('sanctum');
+
+        if (! $user) {
+            $request->validate(['email' => ['required', 'email']]);
+            $user = User::where('email', $request->string('email'))->first();
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        if ($user && ! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
 
-        return $this->respond(message: 'Verification email sent.');
+        return $this->respond(message: 'If that account exists and needs verifying, we sent a new email.');
     }
 
     /**

@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Product;
 use App\Models\User;
+use App\Models\Vote;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,6 +20,38 @@ it('shows a public profile by handle without authentication', function () {
 
 it('returns 404 for an unknown handle', function () {
     $this->getJson('/api/users/does-not-exist')->assertNotFound();
+});
+
+it('includes products launched, member since, and votes received stats', function () {
+    $founder = User::factory()->create(['handle' => 'amina-yusuf']);
+    $launched = Product::factory()->launched()->create(['founder_id' => $founder->id]);
+    Product::factory()->create(['founder_id' => $founder->id, 'status' => 'draft']);
+    Vote::factory()->create(['product_id' => $launched->id]);
+    Vote::factory()->retracted()->create(['product_id' => $launched->id]);
+
+    $response = $this->getJson('/api/users/amina-yusuf');
+
+    $response->assertOk()
+        ->assertJsonPath('data.products_count', 1)
+        ->assertJsonPath('data.votes_received_count', 1)
+        ->assertJsonPath('data.member_since', $founder->created_at->toJSON());
+});
+
+it('lists only a member\'s launched products, paginated', function () {
+    $founder = User::factory()->create(['handle' => 'amina-yusuf']);
+    $launched = Product::factory()->launched()->create(['founder_id' => $founder->id]);
+    Product::factory()->create(['founder_id' => $founder->id, 'status' => 'draft']);
+
+    $response = $this->getJson('/api/users/amina-yusuf/products');
+
+    $response->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $launched->id)
+        ->assertJsonStructure(['meta', 'links']);
+});
+
+it('returns 404 from the member products endpoint for an unknown handle', function () {
+    $this->getJson('/api/users/does-not-exist/products')->assertNotFound();
 });
 
 it('returns the authenticated member\'s own account with private fields', function () {
@@ -61,8 +95,8 @@ it('rejects a handle already taken by another member', function () {
         ->assertJsonValidationErrors('handle');
 });
 
-it('uploads an avatar to s3 when editing the profile', function () {
-    Storage::fake('s3');
+it('uploads an avatar to the configured uploads disk when editing the profile', function () {
+    Storage::fake(config('filesystems.uploads'));
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->patchJson('/api/me', [
@@ -71,5 +105,5 @@ it('uploads an avatar to s3 when editing the profile', function () {
 
     $response->assertOk();
     expect($user->refresh()->avatar)->not->toBeNull();
-    Storage::disk('s3')->assertExists($user->avatar);
+    Storage::disk(config('filesystems.uploads'))->assertExists($user->avatar);
 });

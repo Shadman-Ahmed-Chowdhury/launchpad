@@ -50,7 +50,7 @@ Claude-specific notes are in [`CLAUDE.md`](CLAUDE.md), which points back here.
 - Email must be verified before a member's vote/comment counts.
 - Rate-limit voting, signup, and login endpoints — the brief expects vote manipulation attempts.
 - Every staff action (approve, reject, suspend, feature, take down) writes to the audit log. No exceptions.
-- File uploads (logos, screenshots, avatars) are validated by type/size and served from S3, not the app server.
+- File uploads (logos, screenshots, avatars) are validated by type/size and served from S3 in production. An environment with no S3 bucket configured (e.g. local dev) automatically falls back to the local "public" disk instead — see `config('filesystems.uploads')` and ADR-032.
 
 ## Docs upkeep
 

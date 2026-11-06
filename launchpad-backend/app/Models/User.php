@@ -71,6 +71,29 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * This member's products that are actually public — what the public
+     * profile page lists (see ADR-031), same `launched`-only visibility
+     * `ProductController::index()` uses for the front page.
+     *
+     * @return HasMany<Product, $this>
+     */
+    public function launchedProducts(): HasMany
+    {
+        return $this->products()->where('status', 'launched');
+    }
+
+    /**
+     * Active votes across this member's launched products — the "upvotes
+     * received" stat on the public profile (see ADR-031).
+     */
+    public function votesReceivedCount(): int
+    {
+        return Vote::whereNull('retracted_at')
+            ->whereHas('product', fn ($query) => $query->where('founder_id', $this->id)->where('status', 'launched'))
+            ->count();
+    }
+
+    /**
      * @return HasMany<AuthToken, $this>
      */
     public function authTokens(): HasMany
@@ -103,8 +126,9 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * `avatar` holds either an S3 key (password/self-uploaded avatars) or a
-     * ready-made URL (Google profile photos) — resolve whichever it is.
+     * `avatar` holds either an uploads-disk key (password/self-uploaded
+     * avatars — see config('filesystems.uploads'), ADR-032) or a ready-made
+     * URL (Google profile photos) — resolve whichever it is.
      */
     public function avatarUrl(): ?string
     {
@@ -114,7 +138,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return Str::startsWith($this->avatar, ['http://', 'https://'])
             ? $this->avatar
-            : Storage::disk('s3')->url($this->avatar);
+            : Storage::disk(config('filesystems.uploads'))->url($this->avatar);
     }
 
     /**

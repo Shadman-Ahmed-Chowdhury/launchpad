@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\Hash;
 class RegisterController extends Controller
 {
     /**
-     * Sign up with email + password. The account starts unverified — votes
-     * and comments don't count until the email is confirmed (ADR-010).
+     * Sign up with email + password. The account starts unverified and gets
+     * no session — login itself is blocked until the email is confirmed
+     * (see ADR-030), so there's nothing useful a token would do yet.
      */
     public function store(RegisterRequest $request): JsonResponse
     {
@@ -33,7 +34,6 @@ class RegisterController extends Controller
 
         return $this->respond([
             'user' => new AuthUserResource($user),
-            'token' => $user->createToken('api')->plainTextToken,
         ], status: 201);
     }
 }

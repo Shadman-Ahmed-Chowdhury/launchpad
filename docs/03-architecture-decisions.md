@@ -482,3 +482,75 @@ bottom. Don't delete old entries — mark them superseded instead.
   Pusher/broadcasting isn't wired into any flow yet, and wiring up the
   real-time layer is a separate, already-flagged piece of work (ADR-004/019),
   not something this endpoint needs to add on its own.
+
+## ADR-030: Login itself requires a verified email (amends ADR-010/ADR-020)
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** `SessionController::store()` now rejects a password-account
+  login (422, same validation shape as a bad password) when
+  `email_verified_at` is null — previously verification only gated voting
+  and commenting (ADR-010), login itself was unrestricted. `RegisterController`
+  no longer issues a Sanctum token on sign-up, since there's nothing for a
+  pre-verification session to do now. `EmailVerificationController::send()`
+  (resend) moved out of the `auth:sanctum` route group and accepts an `email`
+  field for an anonymous caller — a password-account user who still needs a
+  new link can no longer be signed in to ask for one the old authenticated
+  way. Same enumeration-safe response either way, matching
+  `PasswordResetController::store()`. Google accounts are unaffected —
+  `GoogleAuthController` already sets `email_verified_at` at creation, since
+  Google has already verified that address.
+- **Why:** Product decision: a confirmation email is only worth sending if an
+  unconfirmed account can't do anything yet, including sign in — closes the
+  gap where someone could register with an email they don't control and
+  still use the account immediately. Frontend: sign-up now redirects to
+  `/login?registered=1` ("check your email") instead of auto-logging in, and
+  the login form offers a "Resend verification email" action (calling the
+  now-public resend endpoint) when a login attempt comes back unverified.
+
+## ADR-031: Public profile stats + a member's-products endpoint
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** `PublicProfileResource` gained `products_count` (via a new
+  `User::launchedProducts()` relation — same `launched`-only visibility
+  `ProductController::index()` uses for the front page) and
+  `votes_received_count` (a new `User::votesReceivedCount()` helper: active
+  votes summed across the member's launched products). The member's product
+  list itself is a separate endpoint, `GET /api/users/{handle}/products`
+  (`ProfileController::products()`), not nested in `show()`'s payload — same
+  reasoning as `/me` vs `/me/products`: a `ProductResource::collection()`
+  only gets pagination `meta`/`links` for free from Laravel when it's the
+  top-level response (ADR-022), which a combined payload couldn't do without
+  hand-rolling pagination.
+- **Why:** The brief's public profile ("shows name, photo, one-line bio,
+  links · lists the member's products," plus "add some stats like how many
+  products") needed a real page — the frontend route existed only as a
+  placeholder stub until now. The product list needed its own paginated
+  endpoint for the same reason `/me/products` does; the two stats reuse
+  existing `launched`/`activeVotes` concepts (ADR-009, ADR-029) rather than
+  introducing new ones.
+
+## ADR-032: Uploads fall back to the local "public" disk when S3 isn't configured (refines ADR-007)
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** A new `config('filesystems.uploads')` resolves to `s3` when
+  `AWS_BUCKET` is set, otherwise `public` (Laravel's local disk, the
+  framework default — see `config/filesystems.php`). Every upload call site
+  (`User::avatarUrl()`, `Product::logoUrl()`, `ProfileController::update()`,
+  `ProductController::store()`/`update()`) reads/writes through this one
+  resolved disk instead of hard-coding `Storage::disk('s3')`, so a write and
+  a later read always agree on where the file actually lives. Requires
+  `php artisan storage:link` once per environment using the local fallback,
+  so the "public" disk is reachable at `/storage/...`.
+- **Why:** ADR-007 chose S3 for the reasons it gives (stateless app
+  servers, deploy/scale independence) — that's still the right call for
+  production and hasn't changed. But a local dev setup with no AWS
+  credentials configured can't resolve the `s3` driver at all (it throws
+  immediately, not a slow/flaky request), which made every file-upload
+  feature untestable by hand outside of CI's `Storage::fake()`. One
+  resolved-disk indirection keeps S3 as the real target wherever it's
+  configured, while local development gets a working upload for free
+  instead of a hard dependency on AWS credentials just to click through the
+  app.

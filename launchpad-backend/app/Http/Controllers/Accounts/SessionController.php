@@ -37,6 +37,12 @@ class SessionController extends Controller
             ]);
         }
 
+        if (! $user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => ['Please verify your email before signing in. Check your inbox for the confirmation link.'],
+            ]);
+        }
+
         return $this->respond([
             'user' => new AuthUserResource($user),
             'token' => $user->createToken('api')->plainTextToken,

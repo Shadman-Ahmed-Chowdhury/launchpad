@@ -1,14 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
-import { loginAction, type AuthFormState } from "@/app/actions/auth";
+import {
+  loginAction,
+  resendVerificationByEmailAction,
+  type AuthFormState,
+} from "@/app/actions/auth";
+import { PasswordInput } from "@/components/password-input";
 
 export function LoginForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     loginAction,
     undefined,
   );
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
+
+  async function handleResend() {
+    if (!state?.unverifiedEmail) return;
+    setResendStatus("sending");
+    await resendVerificationByEmailAction(state.unverifiedEmail);
+    setResendStatus("sent");
+  }
 
   return (
     <form action={formAction} className="mt-10 space-y-6">
@@ -16,6 +29,26 @@ export function LoginForm({ next }: { next: string }) {
 
       {state?.message && (
         <p className="text-sm text-danger">{state.message}</p>
+      )}
+
+      {state?.unverifiedEmail && (
+        <div className="rounded-lg border border-hairline px-4 py-3 text-sm">
+          <p className="text-danger">
+            {state.errors?.email?.[0]}
+          </p>
+          {resendStatus === "sent" ? (
+            <p className="mt-1 text-muted">Check your inbox for a new link.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendStatus === "sending"}
+              className="mt-1 font-medium text-foreground underline underline-offset-4 hover:text-gold disabled:opacity-60"
+            >
+              {resendStatus === "sending" ? "Sending…" : "Resend verification email"}
+            </button>
+          )}
+        </div>
       )}
 
       <div>
@@ -30,7 +63,7 @@ export function LoginForm({ next }: { next: string }) {
           placeholder="you@example.com"
           className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"
         />
-        {state?.errors?.email && (
+        {state?.errors?.email && !state.unverifiedEmail && (
           <p className="mt-2 text-sm text-danger">{state.errors.email[0]}</p>
         )}
       </div>
@@ -47,10 +80,9 @@ export function LoginForm({ next }: { next: string }) {
             Forgot?
           </Link>
         </div>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           placeholder="••••••••"
           className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"

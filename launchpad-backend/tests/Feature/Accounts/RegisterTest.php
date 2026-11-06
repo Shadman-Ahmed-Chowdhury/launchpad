@@ -19,7 +19,8 @@ it('registers a new member with email and password', function () {
         ->assertJsonPath('data.user.email', 'amina@example.com')
         ->assertJsonPath('data.user.handle', 'amina-yusuf')
         ->assertJsonPath('data.user.email_verified', false)
-        ->assertJsonStructure(['data' => ['user', 'token'], 'message']);
+        ->assertJsonStructure(['data' => ['user'], 'message'])
+        ->assertJsonMissingPath('data.token');
 
     $user = User::where('email', 'amina@example.com')->first();
     expect($user)->not->toBeNull();
