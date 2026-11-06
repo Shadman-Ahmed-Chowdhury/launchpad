@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounts\UpdateProfileRequest;
 use App\Http\Resources\Accounts\AuthUserResource;
 use App\Http\Resources\Accounts\PublicProfileResource;
+use App\Http\Resources\Products\ProductResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
@@ -26,9 +28,36 @@ class ProfileController extends Controller
      */
     public function show(string $handle): JsonResponse
     {
-        $user = User::where('handle', $handle)->with('links')->firstOrFail();
+        $user = User::where('handle', $handle)
+            ->with('links')
+            ->withCount('launchedProducts')
+            ->firstOrFail();
 
         return $this->respond(new PublicProfileResource($user));
+    }
+
+    /**
+     * The member's launched products — paginated, same shape as the public
+     * products index (see ADR-031). Kept as its own endpoint rather than
+     * nested in `show()`'s payload so it still gets pagination `meta`/`links`
+     * for free from `ProductResource::collection()`, same reasoning as
+     * `/me` vs `/me/products`.
+     */
+    public function products(Request $request, string $handle): AnonymousResourceCollection
+    {
+        $user = User::where('handle', $handle)->firstOrFail();
+        $viewer = $request->user('sanctum');
+
+        $products = $user->launchedProducts()
+            ->withCount(['activeVotes as votes_count'])
+            ->with(['topics', 'founder'])
+            ->when($viewer, fn ($query) => $query->with([
+                'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
+            ]))
+            ->latest('launched_at')
+            ->paginate();
+
+        return ProductResource::collection($products);
     }
 
     /**
@@ -42,7 +71,7 @@ class ProfileController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('avatar')) {
-            $data['avatar'] = Storage::disk('s3')->putFile('avatars', $request->file('avatar'), 'public');
+            $data['avatar'] = Storage::disk(config('filesystems.uploads'))->putFile('avatars', $request->file('avatar'), 'public');
         }
 
         $user->fill(collect($data)->except('links')->all())->save();

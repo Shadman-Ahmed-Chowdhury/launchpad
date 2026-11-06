@@ -86,7 +86,7 @@ class Product extends Model
 
         return Str::startsWith($this->logo, ['http://', 'https://'])
             ? $this->logo
-            : Storage::disk('s3')->url($this->logo);
+            : Storage::disk(config('filesystems.uploads'))->url($this->logo);
     }
 
     /**

@@ -20,6 +20,8 @@ class PublicProfileResource extends JsonResource
             'avatar_url' => $this->avatarUrl(),
             'links' => UserLinkResource::collection($this->whenLoaded('links')),
             'member_since' => $this->created_at,
+            'products_count' => $this->launched_products_count,
+            'votes_received_count' => $this->votesReceivedCount(),
         ];
     }
 }

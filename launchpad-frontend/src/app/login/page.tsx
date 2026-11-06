@@ -7,9 +7,9 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; registered?: string; verified?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, registered, verified } = await searchParams;
   const target = next?.startsWith("/") ? next : "/";
 
   await redirectIfAuthenticated(target);
@@ -27,6 +27,18 @@ export default async function LoginPage({
             Sign in to vote, comment, and follow.
           </p>
 
+          {registered === "1" && (
+            <p className="mt-6 rounded-lg border border-hairline bg-gold-fill/10 px-4 py-3 text-sm text-foreground">
+              Account created — check your email to verify your address,
+              then sign in below.
+            </p>
+          )}
+          {verified === "1" && (
+            <p className="mt-6 rounded-lg border border-hairline bg-gold-fill/10 px-4 py-3 text-sm text-foreground">
+              Email verified — sign in below.
+            </p>
+          )}
+
           <LoginForm next={target} />
 
           <div className="mt-8 flex items-center gap-4 text-sm text-muted">
@@ -37,9 +49,11 @@ export default async function LoginPage({
 
           <button
             type="button"
-            className="mt-8 w-full rounded-full border border-hairline px-6 py-3 text-sm font-medium transition-colors hover:border-foreground"
+            disabled
+            className="mt-8 w-full cursor-not-allowed rounded-full border border-hairline px-6 py-3 text-sm font-medium text-muted"
           >
             Continue with Google
+            <span className="ml-2 text-xs">(Coming soon)</span>
           </button>
 
           <p className="mt-8 text-sm text-muted">

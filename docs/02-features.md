@@ -15,7 +15,9 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 ## Member (signed up, verified)
 
 - Can sign up with email + password, or Google
-- Can verify email before voting/commenting counts
+- Must verify email before logging in (password accounts only — Google
+  accounts are verified by Google already); sent to the login page once
+  verified
 - Can log in, log out, reset password, change password (if email/password account)
 - Has a public profile: name, photo, one-line bio, links, their products
 - Can edit their own profile

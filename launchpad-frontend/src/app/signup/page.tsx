@@ -30,9 +30,11 @@ export default async function SignupPage() {
 
           <button
             type="button"
-            className="mt-8 w-full rounded-full border border-hairline px-6 py-3 text-sm font-medium transition-colors hover:border-foreground"
+            disabled
+            className="mt-8 w-full cursor-not-allowed rounded-full border border-hairline px-6 py-3 text-sm font-medium text-muted"
           >
             Continue with Google
+            <span className="ml-2 text-xs">(Coming soon)</span>
           </button>
 
           <p className="mt-8 text-sm text-muted">

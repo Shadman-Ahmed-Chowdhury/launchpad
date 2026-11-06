@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { resetPasswordAction, type AuthFormState } from "@/app/actions/auth";
+import { PasswordInput } from "@/components/password-input";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
@@ -52,10 +53,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
           <label htmlFor="password" className="text-sm font-medium">
             New password
           </label>
-          <input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             required
             placeholder="At least 8 characters"
             className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"
@@ -71,10 +71,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
           <label htmlFor="passwordConfirmation" className="text-sm font-medium">
             Confirm new password
           </label>
-          <input
+          <PasswordInput
             id="passwordConfirmation"
             name="passwordConfirmation"
-            type="password"
             required
             placeholder="••••••••"
             className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted focus:border-gold"

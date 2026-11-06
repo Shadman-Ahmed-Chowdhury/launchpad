@@ -86,7 +86,7 @@ class ProductController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
-            $data['logo'] = Storage::disk('s3')->putFile('product-logos', $request->file('logo'), 'public');
+            $data['logo'] = Storage::disk(config('filesystems.uploads'))->putFile('product-logos', $request->file('logo'), 'public');
         }
 
         $product = Product::create([
@@ -119,7 +119,7 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('logo') && $product->status !== 'launched') {
-            $data['logo'] = Storage::disk('s3')->putFile('product-logos', $request->file('logo'), 'public');
+            $data['logo'] = Storage::disk(config('filesystems.uploads'))->putFile('product-logos', $request->file('logo'), 'public');
         }
 
         $product->fill(collect($data)->except('topic_ids')->all())->save();

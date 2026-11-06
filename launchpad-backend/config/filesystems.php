@@ -17,6 +17,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Uploads Disk
+    |--------------------------------------------------------------------------
+    |
+    | Where logos, screenshots, and avatars are stored (see AGENTS.md). S3
+    | when a bucket is configured (production); otherwise the local "public"
+    | disk, so file uploads still work in an environment (e.g. local dev)
+    | that hasn't set up S3 credentials — see ADR-032. Run
+    | `php artisan storage:link` once so the "public" disk is reachable.
+    |
+    */
+
+    'uploads' => env('AWS_BUCKET') ? 's3' : 'public',
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

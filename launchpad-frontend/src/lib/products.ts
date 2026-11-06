@@ -29,7 +29,7 @@ interface RawProductReview {
   created_at: string;
 }
 
-interface RawProduct {
+export interface RawProduct {
   id: number;
   slug: string;
   name: string;
@@ -53,7 +53,7 @@ interface RawTopic {
   slug: string;
 }
 
-function mapProduct(raw: RawProduct): Product {
+export function mapProduct(raw: RawProduct): Product {
   return {
     id: raw.id,
     slug: raw.slug,

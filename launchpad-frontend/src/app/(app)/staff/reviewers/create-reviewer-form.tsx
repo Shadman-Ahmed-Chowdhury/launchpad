@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createReviewerAction } from "@/app/actions/admin";
+import { PasswordInput } from "@/components/password-input";
 import type { AuthFormState } from "@/lib/action-state";
 
 export function CreateReviewerForm() {
@@ -68,10 +69,9 @@ export function CreateReviewerForm() {
           <label htmlFor="password" className="text-sm font-medium">
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             required
             placeholder="At least 8 characters"
             className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors placeholder:text-muted focus:border-gold"
@@ -84,10 +84,9 @@ export function CreateReviewerForm() {
           <label htmlFor="passwordConfirmation" className="text-sm font-medium">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="passwordConfirmation"
             name="passwordConfirmation"
-            type="password"
             required
             className="mt-2 w-full border-b border-hairline bg-transparent py-2 text-sm outline-none transition-colors focus:border-gold"
           />

@@ -24,15 +24,16 @@ Route::prefix('auth')->group(function () {
     Route::post('/password/reset', [PasswordResetController::class, 'update'])->middleware('throttle:password-reset');
 
     Route::post('/email/verify', [EmailVerificationController::class, 'update'])->middleware('throttle:email-verification');
+    Route::post('/email/verify/resend', [EmailVerificationController::class, 'send'])->middleware('throttle:email-verification');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [SessionController::class, 'destroy']);
-        Route::post('/email/verify/resend', [EmailVerificationController::class, 'send'])->middleware('throttle:email-verification');
         Route::put('/password', [PasswordController::class, 'update']);
     });
 });
 
 Route::get('/users/{handle}', [ProfileController::class, 'show']);
+Route::get('/users/{handle}/products', [ProfileController::class, 'products']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
