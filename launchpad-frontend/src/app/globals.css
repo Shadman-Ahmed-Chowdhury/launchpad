@@ -8,6 +8,7 @@
   --gold-fill: #e7a33e;
   --hairline: rgba(27, 21, 35, 0.12);
   --danger: #a3372a;
+  --success: #3f7355;
 }
 
 @theme inline {
@@ -18,6 +19,7 @@
   --color-gold-fill: var(--gold-fill);
   --color-hairline: var(--hairline);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-space-grotesk);
   --font-display: var(--font-newsreader);
 }

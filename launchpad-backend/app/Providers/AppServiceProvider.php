@@ -40,5 +40,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('email-verification', function (Request $request) {
             return Limit::perMinute(3)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Vote-casting/retraction is always behind auth:sanctum, so a user
+        // id is always available here (see AGENTS.md "Security" — vote
+        // manipulation is an explicit risk).
+        RateLimiter::for('voting', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()->id);
+        });
     }
 }

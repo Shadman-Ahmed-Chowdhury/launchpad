@@ -40,6 +40,7 @@ interface RawProduct {
   website_url: string;
   status: ProductStatus;
   votes_count: number;
+  voted_by_viewer: boolean;
   launch_date: string;
   submitted_at: string | null;
   founder?: RawProductFounder;
@@ -64,6 +65,7 @@ function mapProduct(raw: RawProduct): Product {
     websiteUrl: raw.website_url,
     status: raw.status,
     votesCount: raw.votes_count,
+    votedByViewer: raw.voted_by_viewer,
     launchDate: raw.launch_date,
     submittedAt: raw.submitted_at,
     founder: raw.founder,
@@ -77,8 +79,22 @@ function mapProduct(raw: RawProduct): Product {
   };
 }
 
+/**
+ * Both public product views send the viewer's token when there is one, even
+ * though the route itself has no `auth:sanctum` middleware — it's optional
+ * auth (see `ProductController@show`), used only to flag `votedByViewer` on
+ * each product for a signed-in member (see ADR-029).
+ */
+async function authHeaders(): Promise<RequestInit> {
+  const token = await getAuthToken();
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+}
+
 export async function getProducts(): Promise<Product[]> {
-  const { data } = await apiFetch<{ data: RawProduct[] }>("/api/products");
+  const { data } = await apiFetch<{ data: RawProduct[] }>(
+    "/api/products",
+    await authHeaders(),
+  );
 
   return data.map(mapProduct).sort((a, b) => b.votesCount - a.votesCount);
 }
@@ -89,6 +105,7 @@ export async function getProductBySlug(
   try {
     const { data } = await apiFetch<{ data: RawProduct }>(
       `/api/products/${slug}`,
+      await authHeaders(),
     );
 
     return mapProduct(data);

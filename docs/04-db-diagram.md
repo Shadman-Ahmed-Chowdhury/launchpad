@@ -107,11 +107,12 @@ Table votes {
   id bigint [primary key]
   product_id bigint
   user_id bigint
+  active_user_id bigint // generated: user_id when retracted_at is null, else null (see note below)
   created_at timestamp
   retracted_at timestamp // nullable; set when they take their vote back instead of deleting the row
 
   indexes {
-    (product_id, user_id) [unique] // partial: only among active votes (retracted_at is null)
+    (product_id, active_user_id) [unique] // NULLs don't collide, so this is "unique among active votes only"
   }
 }
 Ref: products.id < votes.product_id
@@ -272,10 +273,12 @@ Ref: users.id < audit_logs.actor_id
   history around as a future anti-fraud signal (see ADR-014). IP/device-fingerprint
   signals still aren't modeled — add a table here once that anti-abuse approach is
   decided, and log it as an ADR.
-- The `votes` migration implements the `(product_id, user_id)` unique index as a plain
-  unique for now, not the partial/retract-aware version ADR-014 describes — there's no
-  vote-casting/retraction endpoint yet to exercise retract-then-recast, so there's
-  nothing to allow around. Revisit when that endpoint is built (see ADR-024).
+- `votes.active_user_id` is a generated column (`case when retracted_at is null then
+  user_id else null end`), not a real stored fact — it exists only so a unique index on
+  `(product_id, active_user_id)` can emulate ADR-014's "unique among active votes only"
+  on MySQL, which (unlike Postgres) has no partial/filtered unique index. A unique index
+  allows unlimited `NULL`s, so retracted votes never collide with each other or with a
+  later recast (see ADR-029).
 - `email`/`handle` on `users` need case-insensitive comparison so two accounts can't
   differ only by case — MySQL's default collation (`utf8mb4_0900_ai_ci` /
   `utf8mb4_unicode_ci`) already compares case-insensitively, so this falls out for

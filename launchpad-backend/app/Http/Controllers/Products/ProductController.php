@@ -19,12 +19,17 @@ class ProductController extends Controller
      * Today's launched products, most-voted first (see ADR-024 — this is a
      * placeholder ordering until the ADR-009/013 decay-score ranking exists).
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
+        $viewer = $request->user('sanctum');
+
         $products = Product::query()
             ->where('status', 'launched')
-            ->withCount('votes')
+            ->withCount(['activeVotes as votes_count'])
             ->with('topics')
+            ->when($viewer, fn ($query) => $query->with([
+                'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
+            ]))
             ->orderByDesc('votes_count')
             ->paginate();
 
@@ -39,7 +44,7 @@ class ProductController extends Controller
     public function mine(Request $request): AnonymousResourceCollection
     {
         $products = $request->user()->products()
-            ->withCount('votes')
+            ->withCount(['activeVotes as votes_count'])
             ->with(['topics', 'latestReview'])
             ->latest()
             ->paginate();
@@ -55,12 +60,15 @@ class ProductController extends Controller
      */
     public function show(Request $request, string $slug): JsonResponse
     {
-        $product = Product::where('slug', $slug)
-            ->withCount('votes')
-            ->with(['topics', 'latestReview'])
-            ->firstOrFail();
-
         $viewer = $request->user('sanctum');
+
+        $product = Product::where('slug', $slug)
+            ->withCount(['activeVotes as votes_count'])
+            ->with(['topics', 'latestReview'])
+            ->when($viewer, fn ($query) => $query->with([
+                'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
+            ]))
+            ->firstOrFail();
 
         if ($product->status !== 'launched' && (! $viewer || ! $viewer->is($product->founder))) {
             abort(404);
@@ -92,7 +100,7 @@ class ProductController extends Controller
             $product->topics()->sync($data['topic_ids']);
         }
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')), 'Product created.', 201);
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load('topics')), 'Product created.', 201);
     }
 
     /**
@@ -120,7 +128,7 @@ class ProductController extends Controller
             $product->topics()->sync($data['topic_ids']);
         }
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')));
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load('topics')));
     }
 
     /**
@@ -152,7 +160,7 @@ class ProductController extends Controller
             'launch_date' => $request->validated('launch_date'),
         ]);
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')), 'Launch day set.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load('topics')), 'Launch day set.');
     }
 
     /**
@@ -169,6 +177,6 @@ class ProductController extends Controller
             'submitted_at' => now(),
         ]);
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load('topics')), 'Product submitted for review.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load('topics')), 'Product submitted for review.');
     }
 }

@@ -12,7 +12,11 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $viewer = $request->user();
+        // 'sanctum' explicitly: `index`/`show` have no `auth:sanctum`
+        // middleware (they're public), so the default guard never resolves
+        // a Bearer-token viewer there — asking the sanctum guard directly
+        // works whether or not that middleware ran (see ADR-029).
+        $viewer = $request->user('sanctum');
         $isFounderOrStaff = $viewer && ($viewer->id === $this->founder_id || $viewer->isStaff());
 
         return [
@@ -26,6 +30,11 @@ class ProductResource extends JsonResource
             'website_url' => $this->website_url,
             'status' => $this->status,
             'votes_count' => $this->votes_count,
+            // Only accurate when the controller eager-loaded `activeVotes`
+            // scoped to this viewer (see ProductController) — defaults to
+            // false otherwise (e.g. the dashboard's `mine()` list, where a
+            // founder can never have voted on their own product).
+            'voted_by_viewer' => $this->relationLoaded('activeVotes') && $this->activeVotes->isNotEmpty(),
             'launch_date' => $this->launch_date,
             'submitted_at' => $this->submitted_at,
             'founder' => $this->whenLoaded('founder', fn () => [

@@ -1,10 +1,11 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductCard } from "@/components/product-card";
+import { getCurrentUser } from "@/lib/auth";
 import { getProducts } from "@/lib/products";
 
 export default async function ProductsPage() {
-  const products = await getProducts();
+  const [products, currentUser] = await Promise.all([getProducts(), getCurrentUser()]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -26,6 +27,7 @@ export default async function ProductsPage() {
                 key={product.id}
                 product={product}
                 rank={index + 1}
+                currentUserId={currentUser?.id}
               />
             ))}
           </div>

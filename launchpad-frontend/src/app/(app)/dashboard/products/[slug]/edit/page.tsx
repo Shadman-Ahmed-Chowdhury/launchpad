@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getMyProductBySlug, getTopics } from "@/lib/products";
 import { ProductForm } from "../../product-form";
+import { LaunchedProductForm } from "../../../launched-product-form";
+
+const EDITABLE_STATUSES = ["draft", "changes_requested", "launched"];
 
 export default async function EditProductPage({
   params,
@@ -16,14 +19,28 @@ export default async function EditProductPage({
     getTopics(),
   ]);
 
-  // Editable while it's a draft, or while a reviewer has sent it back for
-  // changes — launched products have their own, more restricted edit rules
-  // (see docs/02-features.md) not built here yet.
-  if (
-    !product ||
-    (product.status !== "draft" && product.status !== "changes_requested")
-  ) {
+  if (!product || !EDITABLE_STATUSES.includes(product.status)) {
     notFound();
+  }
+
+  if (product.status === "launched") {
+    return (
+      <div className="mx-auto w-full max-w-[80%] px-6 py-16">
+        <h1 className="font-display text-3xl tracking-tight">Edit product</h1>
+        <p className="mt-2 text-muted">
+          It&apos;s live — only the description and website link can change
+          now (see docs/02-features.md).
+        </p>
+
+        <LaunchedProductForm
+          slug={slug}
+          defaultValues={{
+            description: product.description,
+            websiteUrl: product.websiteUrl,
+          }}
+        />
+      </div>
+    );
   }
 
   const topicIds = topics

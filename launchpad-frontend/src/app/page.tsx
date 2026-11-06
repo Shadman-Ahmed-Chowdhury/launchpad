@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { HeroIllustration } from "@/components/hero-illustration";
 import { ProductCard } from "@/components/product-card";
+import { getCurrentUser } from "@/lib/auth";
 import { getProducts } from "@/lib/products";
 
 const steps = [
@@ -39,52 +39,15 @@ const roles = [
 ];
 
 export default async function Home() {
-  const products = await getProducts();
-  const todaysLaunches = products.slice(0, 4);
+  const [products, currentUser] = await Promise.all([getProducts(), getCurrentUser()]);
+  const todaysLaunches = products.slice(0, 5);
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
 
       <main className="flex-1">
-        <div className="mx-auto w-full max-w-5xl px-6 py-24">
-          <div className="grid gap-16 lg:grid-cols-[1fr_260px] lg:items-center">
-            <div className="max-w-2xl">
-              <h1 className="enter font-display text-5xl leading-[1.08] tracking-tight sm:text-6xl">
-                The front page starts over every morning.
-              </h1>
-              <p
-                className="enter mt-6 max-w-lg text-lg text-muted"
-                style={{ animationDelay: "0.08s" }}
-              >
-                Founders launch one product on a day they choose. The
-                community votes, and the best rise before the day is over.
-                Tomorrow, everyone starts again from zero.
-              </p>
-              <div
-                className="enter mt-10 flex items-center gap-6"
-                style={{ animationDelay: "0.16s" }}
-              >
-                <Link
-                  href="/signup"
-                  className="rounded-full bg-gold-fill px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-gold-fill/90"
-                >
-                  Sign up
-                </Link>
-                <Link
-                  href="/products"
-                  className="text-sm text-muted transition-colors hover:text-foreground"
-                >
-                  See today&apos;s launches
-                </Link>
-              </div>
-            </div>
-
-            <HeroIllustration className="enter hidden h-auto w-full text-foreground lg:block" />
-          </div>
-        </div>
-
-        <section className="border-t border-hairline">
+        <section>
           <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 py-16 sm:grid-cols-[12rem_1fr]">
             <div>
               <h2 className="font-display text-2xl">Today&apos;s launches</h2>
@@ -99,6 +62,7 @@ export default async function Home() {
                     key={product.id}
                     product={product}
                     rank={index + 1}
+                    currentUserId={currentUser?.id}
                   />
                 ))}
               </div>
