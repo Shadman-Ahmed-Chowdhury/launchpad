@@ -49,7 +49,7 @@ class ProfileController extends Controller
         $viewer = $request->user('sanctum');
 
         $products = $user->launchedProducts()
-            ->withCount(['activeVotes as votes_count'])
+            ->withCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->with(['topics', 'founder', 'screenshots'])
             ->when($viewer, fn ($query) => $query->with([
                 'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),

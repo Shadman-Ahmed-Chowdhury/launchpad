@@ -132,6 +132,19 @@ Ref: products.id < comments.product_id
 Ref: users.id < comments.user_id
 Ref: comments.id < comments.parent_comment_id
 
+Table comment_likes {
+  id bigint [primary key]
+  comment_id bigint
+  user_id bigint
+  created_at timestamp
+
+  indexes {
+    (comment_id, user_id) [unique]
+  }
+}
+Ref: comments.id < comment_likes.comment_id
+Ref: users.id < comment_likes.user_id
+
 Table product_reports {
   id bigint [primary key]
   product_id bigint
@@ -154,6 +167,10 @@ Table comment_reports {
   resolved_by bigint // users.id, nullable
   resolved_at timestamp // nullable
   created_at timestamp
+
+  indexes {
+    (comment_id, reporter_id) [unique] // one report per member per comment
+  }
 }
 Ref: comments.id < comment_reports.comment_id
 Ref: users.id < comment_reports.reporter_id
@@ -264,6 +281,18 @@ Ref: users.id < audit_logs.actor_id
 - `product_screenshots` is implemented as of ADR-033 — same `created_at`-only
   shape as `product_reviews`, since a screenshot row is replaced wholesale
   (see `ProductController::replaceScreenshots()`), never edited in place.
+- `comments` is implemented as of ADR-037 — one level of reply only
+  (`parent_comment_id` set means it's a reply; a reply can't itself have
+  `parent_comment_id`-pointing children, enforced by `CommentPolicy`, not
+  the schema). `deleted_at` stays unused until a report is actually
+  resolved — the reviewer-facing resolve flow is still unbuilt (see below).
+- `comment_likes` and `comment_reports` are implemented as of ADR-038.
+  `comment_likes` is new scope (not in `docs/01-client-brief.md`) and is a
+  plain hard-delete-on-unlike table, unlike `votes`' soft-retract — there's
+  no anti-fraud reason to keep like/unlike history. `comment_reports` was
+  already drafted for the brief's "report a comment"; only the member-facing
+  *filing* of a report is built — `status`/`resolved_by`/`resolved_at` stay
+  unused until the reviewer-facing resolve queue is built.
 - `product_reports` and `comment_reports` are separate tables instead of one
   polymorphic `reports` table — keeps foreign keys real instead of a loose
   type+id pair. Same reasoning applies to `user_follows`/`topic_follows`: kept as two

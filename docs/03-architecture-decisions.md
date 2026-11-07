@@ -678,3 +678,102 @@ bottom. Don't delete old entries — mark them superseded instead.
   workflow instead of a full re-upload, and match how the rest of the
   product's sub-resources (topics, votes) already have their own
   endpoints rather than being folded into `update()`.
+
+## ADR-037: Comments + one level of replies, founder notified by a queued email
+
+- **Date:** 2026-11-07
+- **Status:** Accepted
+- **Decision:** `comments` (already drafted in `docs/04-db-diagram.md` but
+  unbuilt, same gap ADR-025/033/036 each closed for a different drafted
+  table) is now a real model. `GET /api/products/{slug}/comments`
+  (`CommentController::index()`) returns top-level comments on a `launched`
+  product, newest first, each with its replies eager-loaded oldest-first
+  (`Comment::replies()`) — pagination comes for free the same way every
+  other list endpoint gets it (AGENTS.md). `POST
+  /api/products/{slug}/comments` (`store()`, behind `auth:sanctum`) creates
+  a top-level comment or, with `parent_comment_id` set, a reply. A new
+  `CommentPolicy` gates both: `create()` requires the product to be
+  `launched` (same gating as `ProductPolicy::vote()` — a draft/pending
+  product has no public audience to comment on) and a verified email
+  (ADR-010/020); `reply()` adds one more check — the comment being replied
+  to must itself be top-level (`parent_comment_id === null`), enforcing
+  "one level of reply only" server-side, not just in the UI. Unlike voting,
+  a founder can comment on their own product. On a successful comment, the
+  founder is notified by a new `NewCommentNotification`
+  (`App\Notifications\Comments`, `ShouldQueue` — a background job per
+  ADR-018, mirroring `VerifyEmailNotification`'s shape) — skipped when the
+  commenter is the founder themselves. `Product::comments()` (all comments,
+  top-level and replies) backs a new `comments_count` on `ProductResource`,
+  loaded everywhere `votes_count` already is.
+  Frontend: `src/app/products/[slug]/page.tsx` drops its `DUMMY_COMMENTS`
+  placeholder for real data (`src/lib/comments.ts`, `src/app/actions/
+  comments.ts`). A `CommentForm` (`src/components/comment-form.tsx`) only
+  renders for a signed-in member on a `launched` product — a signed-out
+  visitor gets a "Log in to comment" link instead, same pattern
+  `VoteButton`'s `readOnly` link uses. `CommentThread`
+  (`src/components/comment-thread.tsx`) renders one top-level comment with
+  a "Reply" toggle and its replies indented underneath; a reply renders with
+  no further "Reply" button, keeping the one-level rule honest in the UI
+  too (the backend still enforces it either way).
+- **Why:** The brief and `docs/02-features.md` already scope exactly this —
+  "comment on a product, reply to comments, founder told when somebody
+  comments" — and nothing was built yet. Deliberately **out of scope**
+  here, same reasoning ADR-025 used for the review-outcome notification:
+  comment reporting (`docs/02-features.md`'s "report a comment," a
+  reviewer-facing feature with its own `comment_reports` table, not blocked
+  by this change) and the general in-site notification
+  bell/`notification_preferences` toggle (no notification infrastructure
+  exists yet beyond the two auth emails; building it now for one email
+  would be far more than this slice needs). A plain queued email is
+  "founder is told" well enough until that infrastructure lands.
+
+## ADR-038: Comment likes (new) + comment reporting (resolves the deferral in ADR-037)
+
+- **Date:** 2026-11-07
+- **Status:** Accepted
+- **Decision:** Two member-facing actions on a comment or reply, both
+  gated by a verified email (ADR-010/020, same posture as
+  `CommentPolicy::create()`):
+  - **Likes** — not in `docs/01-client-brief.md`; added on direct
+    product request. A new `comment_likes` table (`comment_id`, `user_id`,
+    unique pair) backs `POST`/`DELETE /api/comments/{comment}/likes`
+    (`CommentLikeController`), gated by new `CommentPolicy::like()`/
+    `unlike()` abilities that mirror `ProductPolicy::vote()`/`unvote()` —
+    except liking your own comment is allowed (no ranking it could skew,
+    unlike self-voting on your own product). Unlike `Vote`'s soft-retract
+    (ADR-014), a `CommentLike` is hard-deleted on unlike — there's no
+    anti-fraud reason to keep a like/unlike history the way there is for
+    product votes.
+  - **Reports** — closes the gap `ADR-037` left open: `comment_reports`
+    (already drafted in `docs/04-db-diagram.md`, unbuilt until now) is a
+    real table, plus a unique `(comment_id, reporter_id)` index beyond what
+    the DBML specified — one report per member per comment, so repeated
+    flagging doesn't look like independent reports once a reviewer queue
+    exists to read them. `POST /api/comments/{comment}/reports`
+    (`CommentReportController`, `StoreCommentReportRequest` — `reason`
+    required) is gated by new `CommentPolicy::report()`, which denies a
+    comment's own author and a duplicate report. This only covers a member
+    *filing* a report — the reviewer-facing queue/resolve flow
+    (`docs/02-features.md`'s "sees reported comments... resolves reports")
+    stays deferred, same scope cut ADR-025 made for the review flow before
+    a dashboard existed for it.
+  - `CommentResource` gained `likes_count`, `liked_by_viewer`, and
+    `reported_by_viewer` — the latter two only accurate when the
+    controller eager-loaded the viewer-scoped `likes`/`reports` relations
+    (same `voted_by_viewer` convention as `ProductResource`, ADR-029).
+    `CommentController::index()` eager-loads both for top-level comments
+    *and* nested replies via a shared `viewerScopedRelations()` helper, so
+    a reply's own like/report state renders correctly without an N+1 query.
+  Frontend: `CommentThread` gained a like toggle (filled/outline heart +
+  count) and a "Report" toggle that reveals an inline reason form — both
+  rendered for top-level comments and replies alike (reply only omits the
+  existing "Reply" toggle, per ADR-037's one-level rule). New
+  `HeartIcon`/`FlagIcon` in `src/components/icons.tsx`.
+- **Why:** Direct request to add like/report/time to every comment and
+  reply. Reporting was already fully scoped by the brief and only needed
+  building; liking is new scope this ADR documents since nothing in
+  `docs/01-client-brief.md` calls for it. Both follow the vote feature's
+  already-established shape (toggle action, policy-gated, resource fields
+  mirroring `voted_by_viewer`) rather than inventing a new pattern. Time
+  display needed no backend change — `CommentResource.created_at` and the
+  frontend's relative-time rendering already existed from ADR-037.

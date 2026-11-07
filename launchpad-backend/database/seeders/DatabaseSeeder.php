@@ -85,6 +85,13 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($products as $index => $definition) {
+            // Re-running the seeder shouldn't pile up flowcraft-2,
+            // flowcraft-3, etc. — same existence check the users/topics
+            // above already use.
+            if (Product::where('name', $definition['name'])->exists()) {
+                continue;
+            }
+
             $founder = $founders[$index];
             // Leave the last one in the reviewer queue so /staff isn't empty
             // on a fresh seed (see ADR-025).

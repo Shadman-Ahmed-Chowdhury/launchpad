@@ -42,6 +42,7 @@ export interface RawProduct {
   status: ProductStatus;
   votes_count: number;
   voted_by_viewer: boolean;
+  comments_count: number;
   launch_date: string;
   submitted_at: string | null;
   founder?: RawProductFounder;
@@ -68,6 +69,7 @@ export function mapProduct(raw: RawProduct): Product {
     status: raw.status,
     votesCount: raw.votes_count,
     votedByViewer: raw.voted_by_viewer,
+    commentsCount: raw.comments_count,
     launchDate: raw.launch_date,
     submittedAt: raw.submitted_at,
     founder: raw.founder,
