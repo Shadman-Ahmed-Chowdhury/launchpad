@@ -35,6 +35,7 @@ class ProductResource extends JsonResource
             'website_url' => $this->website_url,
             'status' => $this->status,
             'votes_count' => $this->votes_count,
+            'comments_count' => $this->comments_count,
             // Only accurate when the controller eager-loaded `activeVotes`
             // scoped to this viewer (see ProductController) — defaults to
             // false otherwise (e.g. the dashboard's `mine()` list, where a

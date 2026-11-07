@@ -9,6 +9,9 @@ use App\Http\Controllers\Accounts\RegisterController;
 use App\Http\Controllers\Accounts\ReviewerController;
 use App\Http\Controllers\Accounts\SessionController;
 use App\Http\Controllers\Accounts\UserController;
+use App\Http\Controllers\Comments\CommentController;
+use App\Http\Controllers\Comments\CommentLikeController;
+use App\Http\Controllers\Comments\CommentReportController;
 use App\Http\Controllers\Products\ProductController;
 use App\Http\Controllers\Products\ProductReviewController;
 use App\Http\Controllers\TopicController;
@@ -44,6 +47,7 @@ Route::get('/topics', [TopicController::class, 'index']);
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
+Route::get('/products/{slug}/comments', [CommentController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/products', [ProductController::class, 'mine']);
@@ -56,6 +60,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/products/{slug}/screenshots/{screenshot}', [ProductController::class, 'destroyScreenshot']);
     Route::post('/products/{slug}/votes', [VoteController::class, 'store'])->middleware('throttle:voting');
     Route::delete('/products/{slug}/votes', [VoteController::class, 'destroy'])->middleware('throttle:voting');
+    Route::post('/products/{slug}/comments', [CommentController::class, 'store']);
+    Route::post('/comments/{comment}/likes', [CommentLikeController::class, 'store']);
+    Route::delete('/comments/{comment}/likes', [CommentLikeController::class, 'destroy']);
+    Route::post('/comments/{comment}/reports', [CommentReportController::class, 'store']);
 
     Route::prefix('reviewer')->group(function () {
         Route::get('/products', [ProductReviewController::class, 'index']);

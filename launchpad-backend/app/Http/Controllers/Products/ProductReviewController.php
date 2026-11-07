@@ -32,7 +32,7 @@ class ProductReviewController extends Controller
         $products = Product::query()
             ->where('status', 'pending_review')
             ->with(['founder', 'topics', 'screenshots'])
-            ->withCount('votes')
+            ->withCount(['votes', 'comments'])
             ->orderBy('submitted_at')
             ->paginate();
 
@@ -46,7 +46,7 @@ class ProductReviewController extends Controller
 
         $this->decide($request, $product, 'approved', 'approve_product');
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load(['topics', 'screenshots'])), 'Product approved.');
+        return $this->respond(new ProductResource($product->loadCount(['votes', 'comments'])->load(['topics', 'screenshots'])), 'Product approved.');
     }
 
     public function reject(ReviewProductRequest $request, string $slug): JsonResponse
@@ -56,7 +56,7 @@ class ProductReviewController extends Controller
 
         $this->decide($request, $product, 'rejected', 'reject_product');
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load(['topics', 'screenshots'])), 'Product rejected.');
+        return $this->respond(new ProductResource($product->loadCount(['votes', 'comments'])->load(['topics', 'screenshots'])), 'Product rejected.');
     }
 
     public function requestChanges(ReviewProductRequest $request, string $slug): JsonResponse
@@ -66,7 +66,7 @@ class ProductReviewController extends Controller
 
         $this->decide($request, $product, 'changes_requested', 'request_product_changes');
 
-        return $this->respond(new ProductResource($product->loadCount('votes')->load(['topics', 'screenshots'])), 'Changes requested.');
+        return $this->respond(new ProductResource($product->loadCount(['votes', 'comments'])->load(['topics', 'screenshots'])), 'Changes requested.');
     }
 
     /**

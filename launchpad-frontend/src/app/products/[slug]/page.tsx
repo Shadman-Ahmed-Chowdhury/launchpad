@@ -6,29 +6,12 @@ import { VoteButton } from "@/components/vote-button";
 import { ShareButton } from "@/components/share-button";
 import { ScreenshotCarousel } from "@/components/screenshot-carousel";
 import { TopicTag } from "@/components/topic-tag";
+import { CommentForm } from "@/components/comment-form";
+import { CommentThread } from "@/components/comment-thread";
 import { PencilIcon } from "@/components/icons";
 import { getCurrentUser } from "@/lib/auth";
+import { getComments } from "@/lib/comments";
 import { getProductBySlug, STATUS_LABELS } from "@/lib/products";
-
-/**
- * Comments aren't a built feature yet (see docs/02-features.md) — these are
- * static placeholders so the page reads the way a launched product's page
- * will once commenting exists, not data from the API.
- */
-const DUMMY_COMMENTS = [
-  {
-    name: "Priya Shah",
-    initial: "P",
-    timeAgo: "2h ago",
-    body: "Really clean execution — the onboarding took me under a minute. How does this handle larger teams?",
-  },
-  {
-    name: "Marcus Webb",
-    initial: "M",
-    timeAgo: "5h ago",
-    body: "Congrats on the launch! Curious whether there's a public roadmap anywhere.",
-  },
-];
 
 /**
  * Editing is possible from draft, changes-requested, pending review,
@@ -52,9 +35,10 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [product, currentUser] = await Promise.all([
+  const [product, currentUser, comments] = await Promise.all([
     getProductBySlug(slug),
     getCurrentUser(),
+    getComments(slug),
   ]);
 
   if (!product) {
@@ -83,6 +67,14 @@ export default async function ProductPage({
                   <h1 className="font-display text-3xl tracking-tight">
                     {product.name}
                   </h1>
+                  {product.founder && (
+                    <Link
+                      href={`/profile/${product.founder.handle}`}
+                      className="mt-1 inline-block text-sm text-muted transition-colors hover:text-gold hover:underline"
+                    >
+                      by {product.founder.name}
+                    </Link>
+                  )}
                   <p className="mt-1 text-lg text-muted">{product.tagline}</p>
                   {product.topics.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -102,25 +94,29 @@ export default async function ProductPage({
 
               <div id="comments" className="mt-16 scroll-mt-16 border-t border-hairline pt-10">
                 <h2 className="font-display text-xl">
-                  Comments <span className="text-muted">({DUMMY_COMMENTS.length})</span>
+                  Comments <span className="text-muted">({product.commentsCount})</span>
                 </h2>
 
-                <div className="mt-6 space-y-6">
-                  {DUMMY_COMMENTS.map((comment) => (
-                    <div key={comment.name} className="flex gap-4">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground font-display text-sm text-background">
-                        {comment.initial}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-medium">{comment.name}</span>
-                          <span className="text-xs text-muted">{comment.timeAgo}</span>
-                        </div>
-                        <p className="mt-1 text-sm leading-relaxed text-muted">
-                          {comment.body}
-                        </p>
-                      </div>
-                    </div>
+                <div className="mt-6">
+                  {product.status === "launched" ? (
+                    currentUser ? (
+                      <CommentForm slug={product.slug} />
+                    ) : (
+                      <Link
+                        href={`/login?next=${encodeURIComponent(`/products/${product.slug}#comments`)}`}
+                        className="text-sm font-medium text-gold hover:underline"
+                      >
+                        Log in to comment
+                      </Link>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted">Comments open once this product launches.</p>
+                  )}
+                </div>
+
+                <div className="mt-8 space-y-6">
+                  {comments.map((comment) => (
+                    <CommentThread key={comment.id} slug={product.slug} comment={comment} />
                   ))}
                 </div>
               </div>

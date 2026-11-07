@@ -64,6 +64,17 @@ class Product extends Model
     }
 
     /**
+     * Every comment on this product, top-level and replies alike — what
+     * `comments_count` is counted from (see `CommentController`).
+     *
+     * @return HasMany<Comment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
      * Up to three screenshots, in display order (see docs/04-db-diagram.md).
      *
      * @return HasMany<ProductScreenshot, $this>

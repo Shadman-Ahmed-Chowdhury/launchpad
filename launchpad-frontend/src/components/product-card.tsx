@@ -4,13 +4,6 @@ import { TopicTag } from "@/components/topic-tag";
 import { VoteButton } from "@/components/vote-button";
 import type { Product } from "@/types";
 
-/**
- * Comments aren't a built feature yet (see docs/02-features.md) — this is a
- * placeholder count matching the two dummy comments shown on every product
- * page, just so the list reads the way Product Hunt's does.
- */
-const DUMMY_COMMENT_COUNT = 2;
-
 export function ProductCard({
   product,
   rank,
@@ -74,7 +67,7 @@ export function ProductCard({
           className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-gold hover:text-gold"
         >
           <CommentIcon className="h-4 w-4" />
-          {DUMMY_COMMENT_COUNT}
+          {product.commentsCount}
         </Link>
       </div>
     </div>

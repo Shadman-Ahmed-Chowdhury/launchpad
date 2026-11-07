@@ -24,6 +24,7 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 - Can vote once per product, and remove their vote
 - Cannot vote on their own product
 - Can comment on a product, and reply to comments
+- Can like a comment or reply
 - Can report a comment or a product
 - Can follow other members and follow topics
 - Gets a feed from followed members/topics

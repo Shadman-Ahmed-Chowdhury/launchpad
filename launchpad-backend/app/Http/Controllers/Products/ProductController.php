@@ -27,7 +27,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->where('status', 'launched')
-            ->withCount(['activeVotes as votes_count'])
+            ->withCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->with(['topics', 'screenshots', 'founder'])
             ->when($viewer, fn ($query) => $query->with([
                 'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
@@ -46,7 +46,7 @@ class ProductController extends Controller
     public function mine(Request $request): AnonymousResourceCollection
     {
         $products = $request->user()->products()
-            ->withCount(['activeVotes as votes_count'])
+            ->withCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->with(['topics', 'latestReview', 'screenshots'])
             ->latest()
             ->paginate();
@@ -65,7 +65,7 @@ class ProductController extends Controller
         $viewer = $request->user('sanctum');
 
         $product = Product::where('slug', $slug)
-            ->withCount(['activeVotes as votes_count'])
+            ->withCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->with(['topics', 'latestReview', 'screenshots', 'founder'])
             ->when($viewer, fn ($query) => $query->with([
                 'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
@@ -109,7 +109,7 @@ class ProductController extends Controller
             ]);
         }
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])), 'Product created.', 201);
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])), 'Product created.', 201);
     }
 
     /**
@@ -150,7 +150,7 @@ class ProductController extends Controller
             $product->topics()->sync($data['topic_ids']);
         }
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])));
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])));
     }
 
     /**
@@ -176,7 +176,7 @@ class ProductController extends Controller
         $this->resubmitIfReviewed($product);
         $product->save();
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])), 'Screenshot added.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])), 'Screenshot added.');
     }
 
     /**
@@ -196,7 +196,7 @@ class ProductController extends Controller
         $this->resubmitIfReviewed($product);
         $product->save();
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])), 'Screenshot removed.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])), 'Screenshot removed.');
     }
 
     /**
@@ -243,7 +243,7 @@ class ProductController extends Controller
             'launch_date' => $request->validated('launch_date'),
         ]);
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])), 'Launch day set.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])), 'Launch day set.');
     }
 
     /**
@@ -260,6 +260,6 @@ class ProductController extends Controller
             'submitted_at' => now(),
         ]);
 
-        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count'])->load(['topics', 'screenshots'])), 'Product submitted for review.');
+        return $this->respond(new ProductResource($product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])->load(['topics', 'screenshots'])), 'Product submitted for review.');
     }
 }

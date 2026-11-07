@@ -79,6 +79,7 @@ export interface Product {
   status: ProductStatus;
   votesCount: number;
   votedByViewer: boolean;
+  commentsCount: number;
   launchDate: string | null;
   submittedAt: string | null;
   founder?: ProductFounder;
@@ -108,11 +109,26 @@ export interface Topic {
   slug: string;
 }
 
+export interface CommentAuthor {
+  id: number;
+  name: string;
+  handle: string;
+  avatarUrl: string | null;
+}
+
+/**
+ * A comment on a product, or a reply (`parentCommentId` set). `replies` is
+ * only ever populated on a top-level comment — one level of reply only
+ * (see CommentPolicy::reply() on the backend).
+ */
 export interface Comment {
   id: number;
-  productId: number;
-  userId: number;
   parentCommentId: number | null;
   body: string;
   createdAt: string;
+  author: CommentAuthor;
+  likesCount: number;
+  likedByViewer: boolean;
+  reportedByViewer: boolean;
+  replies: Comment[];
 }

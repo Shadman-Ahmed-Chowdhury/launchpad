@@ -46,7 +46,7 @@ class VoteController extends Controller
      */
     private function withViewerVote(Product $product, Request $request): ProductResource
     {
-        $product->loadCount(['activeVotes as votes_count'])
+        $product->loadCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->load('topics')
             ->load(['activeVotes' => fn ($query) => $query->where('user_id', $request->user()->id)]);
 
