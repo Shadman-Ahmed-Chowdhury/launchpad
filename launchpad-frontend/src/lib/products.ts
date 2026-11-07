@@ -1,6 +1,12 @@
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { getAuthToken } from "@/lib/session";
-import type { Product, ProductScreenshot, ProductStatus, Topic } from "@/types";
+import type {
+  Pagination,
+  Product,
+  ProductScreenshot,
+  ProductStatus,
+  Topic,
+} from "@/types";
 
 /**
  * Shared by the products list and detail pages so a status reads the same
@@ -55,6 +61,13 @@ interface RawTopic {
   slug: string;
 }
 
+interface RawMeta {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+}
+
 export function mapProduct(raw: RawProduct): Product {
   return {
     id: raw.id,
@@ -94,13 +107,49 @@ async function authHeaders(): Promise<RequestInit> {
   return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 }
 
-export async function getProducts(): Promise<Product[]> {
-  const { data } = await apiFetch<{ data: RawProduct[] }>(
-    "/api/products",
+export interface ProductListParams {
+  q?: string;
+  /** Topic slugs — OR-matched (see ADR-040), sent as one comma-separated param. */
+  topics?: string[];
+  sort?: "newest" | "votes";
+  /** Launch date range, `YYYY-MM-DD` (see ADR-040). */
+  from?: string;
+  to?: string;
+  page?: number;
+}
+
+/**
+ * The product list page's search/topic-filter/date-range/sort (see
+ * ADR-039/ADR-040) — the backend owns ordering now, so this no longer
+ * re-sorts client-side the way it used to.
+ */
+export async function getProducts(
+  params: ProductListParams = {},
+): Promise<{ products: Product[]; pagination: Pagination }> {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.topics?.length) query.set("topics", params.topics.join(","));
+  if (params.sort) query.set("sort", params.sort);
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
+  if (params.page) query.set("page", String(params.page));
+
+  const queryString = query.toString();
+
+  const { data, meta } = await apiFetch<{ data: RawProduct[]; meta: RawMeta }>(
+    `/api/products${queryString ? `?${queryString}` : ""}`,
     await authHeaders(),
   );
 
-  return data.map(mapProduct).sort((a, b) => b.votesCount - a.votesCount);
+  return {
+    products: data.map(mapProduct),
+    pagination: {
+      currentPage: meta.current_page,
+      lastPage: meta.last_page,
+      total: meta.total,
+      perPage: meta.per_page,
+    },
+  };
 }
 
 export async function getProductBySlug(

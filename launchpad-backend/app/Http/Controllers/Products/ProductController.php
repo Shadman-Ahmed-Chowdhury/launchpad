@@ -14,26 +14,49 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
     /**
-     * Today's launched products, most-voted first (see ADR-024 — this is a
-     * placeholder ordering until the ADR-009/013 decay-score ranking exists).
+     * Today's launched products — most-voted first by default (see ADR-024 —
+     * still a placeholder ordering until the ADR-009/013 decay-score ranking
+     * exists). Supports the product list page's search (`q`), topic filter
+     * (`topics`, comma-separated slugs, OR-matched), launch-date range
+     * (`from`/`to`), and sort (`sort=newest|votes`) — see ADR-039/ADR-040.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $viewer = $request->user('sanctum');
 
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'topics' => ['nullable', 'string', 'max:500'],
+            'sort' => ['nullable', Rule::in(['newest', 'votes'])],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $topicSlugs = array_filter(array_map('trim', explode(',', $filters['topics'] ?? '')));
+
         $products = Product::query()
             ->where('status', 'launched')
+            ->when($filters['q'] ?? null, fn ($query, $term) => $query->search($term))
+            ->when($topicSlugs, fn ($query) => $query->inTopics($topicSlugs))
+            ->when($filters['from'] ?? null, fn ($query, $from) => $query->where('launch_date', '>=', $from))
+            ->when($filters['to'] ?? null, fn ($query, $to) => $query->where('launch_date', '<=', $to))
             ->withCount(['activeVotes as votes_count', 'comments as comments_count'])
             ->with(['topics', 'screenshots', 'founder'])
             ->when($viewer, fn ($query) => $query->with([
                 'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
             ]))
-            ->orderByDesc('votes_count')
-            ->paginate();
+            ->when(
+                ($filters['sort'] ?? null) === 'newest',
+                fn ($query) => $query->orderByDesc('launched_at'),
+                fn ($query) => $query->orderByDesc('votes_count'),
+            )
+            ->paginate()
+            ->withQueryString();
 
         return ProductResource::collection($products);
     }

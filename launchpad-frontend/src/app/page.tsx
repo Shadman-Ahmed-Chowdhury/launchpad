@@ -39,7 +39,10 @@ const roles = [
 ];
 
 export default async function Home() {
-  const [products, currentUser] = await Promise.all([getProducts(), getCurrentUser()]);
+  const [{ products }, currentUser] = await Promise.all([
+    getProducts(),
+    getCurrentUser(),
+  ]);
   const todaysLaunches = products.slice(0, 5);
 
   return (

@@ -71,6 +71,10 @@ Table products {
   is_featured bool [default: false]
   created_at timestamp
   updated_at timestamp
+
+  indexes {
+    (name, tagline, description) [type: fulltext] // product list search (ADR-039); MySQL only
+  }
 }
 Ref: users.id < products.founder_id
 
@@ -318,3 +322,6 @@ Ref: users.id < audit_logs.actor_id
   on these columns.
 - `id` and foreign-key columns are `bigint` to match Laravel/Eloquent's default
   migration helpers (`id()` / `foreignId()`), which use unsigned big integers.
+- `products`' FULLTEXT index backs the product list page's search (ADR-039). It's added
+  by a driver-guarded migration (MySQL only) because sqlite — the Pest test suite's
+  driver — has no FULLTEXT support; `Product::scopeSearch()` falls back to `LIKE` there.

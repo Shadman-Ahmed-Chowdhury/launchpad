@@ -109,6 +109,16 @@ export interface Topic {
   slug: string;
 }
 
+/**
+ * Laravel's default pagination `meta`, camelCased (see src/lib/products.ts).
+ */
+export interface Pagination {
+  currentPage: number;
+  lastPage: number;
+  total: number;
+  perPage: number;
+}
+
 export interface CommentAuthor {
   id: number;
   name: string;

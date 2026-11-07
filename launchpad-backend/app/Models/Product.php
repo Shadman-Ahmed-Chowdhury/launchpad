@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -108,6 +110,42 @@ class Product extends Model
         return Str::startsWith($this->logo, ['http://', 'https://'])
             ? $this->logo
             : Storage::disk(config('filesystems.uploads'))->url($this->logo);
+    }
+
+    /**
+     * Matches `name`/`tagline`/`description` against the search term — MySQL
+     * FULLTEXT where available, LIKE everywhere else (sqlite, the Pest
+     * suite's driver, has no FULLTEXT support; see the migration that adds
+     * the index and ADR-039).
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        if (DB::connection()->getDriverName() === 'mysql') {
+            return $query->whereFullText(['name', 'tagline', 'description'], $term);
+        }
+
+        return $query->where(function (Builder $query) use ($term) {
+            $query->where('name', 'like', "%{$term}%")
+                ->orWhere('tagline', 'like', "%{$term}%")
+                ->orWhere('description', 'like', "%{$term}%");
+        });
+    }
+
+    /**
+     * Restricts to products tagged with at least one of the given topic
+     * slugs (OR-matched — a multi-select filter, see ADR-040, amending the
+     * single-topic `scopeInTopic()` ADR-039 originally shipped).
+     *
+     * @param  Builder<Product>  $query
+     * @param  array<int, string>  $slugs
+     * @return Builder<Product>
+     */
+    public function scopeInTopics(Builder $query, array $slugs): Builder
+    {
+        return $query->whereHas('topics', fn (Builder $query) => $query->whereIn('slug', $slugs));
     }
 
     /**
