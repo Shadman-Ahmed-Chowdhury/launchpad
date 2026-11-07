@@ -777,3 +777,84 @@ bottom. Don't delete old entries — mark them superseded instead.
   mirroring `voted_by_viewer`) rather than inventing a new pattern. Time
   display needed no backend change — `CommentResource.created_at` and the
   frontend's relative-time rendering already existed from ADR-037.
+
+## ADR-039: Product list search, topic filter, and sort (resolves the ADR-017 deferral; refines ADR-024's placeholder ordering)
+
+- **Date:** 2026-11-07
+- **Status:** Accepted
+- **Decision:** `GET /api/products` (`ProductController::index()`) gains
+  three optional, validated query params, all scoped to the already-existing
+  `status = 'launched'` list — no change to what's visible, only to its
+  order/subset:
+  - `q` — matched against `name`, `tagline`, and `description` (the brief's
+    "search by name" and "search by what a product does"). A new migration
+    adds a MySQL `FULLTEXT` index on those three columns (ADR-017's "revisit
+    with a dedicated search engine only if it's not fast enough" — this is
+    that first MySQL FULLTEXT pass). Two new `Product` query scopes carry
+    the logic instead of the controller: `scopeSearch()` uses
+    `whereFullText()` on MySQL, and falls back to an `orWhere(... 'like' ...)`
+    group on any other driver — needed because the Pest suite runs on
+    sqlite (`phpunit.xml`), which has no FULLTEXT support at all, so both
+    the migration and the scope are driver-guarded.
+  - `topic` — matched by **topic slug** (`scopeInTopic()`, a
+    `whereHas('topics', ...)` check), not id. `GET /api/topics` already
+    returns slugs, and matching the brief's prospective
+    `/topics/productivity`-style URL keeps the param human-readable — though
+    that per-topic route itself stays deferred (see below).
+  - `sort` — `newest` (`orderByDesc('launched_at')`) or `votes`
+    (`orderByDesc('votes_count')`, the existing default, unchanged from
+    ADR-024's placeholder ordering).
+  All three are validated inline in the controller (`$request->validate([...])`,
+  `sort` via `Rule::in(['newest', 'votes'])`) rather than a dedicated Form
+  Request — a three-field GET filter didn't warrant a new class the way a
+  mutation's validation does elsewhere in this codebase. `paginate()` gained
+  `->withQueryString()` so pagination links keep `q`/`topic`/`sort` attached.
+- **Why:** `docs/02-features.md`'s visitor row and the client brief already
+  scope exactly this ("search products by name/description, filter by
+  topic, sort by newest or most voted") for the product list page only — the
+  user explicitly deferred a per-topic search route (e.g.
+  `/topics/productivity`) to a later change, so nothing here builds that.
+  Query scopes (not inline controller logic) keep this consistent with
+  AGENTS.md's "business logic... in services/model methods," and are a
+  reusable building block if a future topic-scoped endpoint needs the same
+  filters.
+
+## ADR-040: Topic filter becomes multi-select (OR-matched), plus a launch-date range filter (amends ADR-039)
+
+- **Date:** 2026-11-07
+- **Status:** Accepted
+- **Decision:** Two additions to the product list endpoint, neither in
+  `docs/01-client-brief.md` — both added on direct product request, the same
+  "not in the brief, built because asked for" pattern ADR-038 used for
+  comment likes:
+  - `topic` (single slug) is replaced by `topics` — a comma-separated list
+    of slugs, OR-matched (`Product::scopeInTopics()`, a `whereIn('slug', ...)`
+    inside the existing `whereHas('topics', ...)` check, superseding
+    `scopeInTopic()`). A product matches if it carries *any* of the selected
+    topics, the standard reading of a multi-select filter. Comma-separated
+    in one param (not repeated `topics[]` keys) keeps the URL simple to
+    build/read on the frontend; the controller splits and trims it before
+    filtering.
+  - `from`/`to` filter on `products.launch_date` (not `launched_at`) —
+    it's a plain `date` column already on the table, so a date-picker range
+    needs no time-of-day/timezone handling the way comparing against a
+    `timestamp` would. Both are validated as real dates, and `to` must be
+    `after_or_equal:from` (422 otherwise, per ADR-022's validation
+    envelope).
+  Frontend: the topic chip row (ADR-039) is replaced by a searchable
+  multi-select dropdown (`ProductSearchBar`) — a text input inside the
+  dropdown filters the already-fetched `Topic[]` list client-side (only
+  ~20 topics, same reasoning `TopicController::index()`'s page-size-100
+  comment already gives for treating the whole taxonomy as one small,
+  fully-loaded list), and each checkbox toggle applies immediately, same
+  "no Apply button" immediacy the topic chips and sort toggle already had.
+  Two `<input type="date">` fields (From/To) sit alongside it, each
+  updating the URL on change.
+- **Why:** Direct request to let the topic filter select more than one
+  topic and to narrow results to a launch-date window. Multi-select reuses
+  the same `topics`-as-filter shape ADR-039 established rather than
+  inventing a parallel param, and OR-matching is what a visitor expects
+  from a multi-select filter (narrowing with AND would make adding a
+  second topic only shrink results, which isn't how this kind of filter
+  reads to a user). The per-topic search route deferral from ADR-039 is
+  unchanged by this.

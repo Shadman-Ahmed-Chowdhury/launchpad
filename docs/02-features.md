@@ -9,7 +9,8 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 - Can view a product page (description, screenshots, votes, comments)
 - Can view a member's public profile
 - Can view past days, weekly / monthly / all-time top lists per topic
-- Can search products by name/description, filter by topic, sort by newest or most voted
+- Can search products by name/description, filter by one or more topics and by
+  launch date range, sort by newest or most voted
 - Cannot vote, comment, follow, or submit a product
 
 ## Member (signed up, verified)
