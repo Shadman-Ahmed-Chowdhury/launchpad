@@ -1,6 +1,6 @@
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { getAuthToken } from "@/lib/session";
-import type { Product, ProductStatus, Topic } from "@/types";
+import type { Product, ProductScreenshot, ProductStatus, Topic } from "@/types";
 
 /**
  * Shared by the products list and detail pages so a status reads the same
@@ -37,6 +37,7 @@ export interface RawProduct {
   description: string;
   logo: string | null;
   topics: string[];
+  screenshots?: ProductScreenshot[];
   website_url: string;
   status: ProductStatus;
   votes_count: number;
@@ -62,6 +63,7 @@ export function mapProduct(raw: RawProduct): Product {
     description: raw.description,
     logo: raw.logo,
     topics: raw.topics,
+    screenshots: raw.screenshots ?? [],
     websiteUrl: raw.website_url,
     status: raw.status,
     votesCount: raw.votes_count,

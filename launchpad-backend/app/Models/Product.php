@@ -64,6 +64,16 @@ class Product extends Model
     }
 
     /**
+     * Up to three screenshots, in display order (see docs/04-db-diagram.md).
+     *
+     * @return HasMany<ProductScreenshot, $this>
+     */
+    public function screenshots(): HasMany
+    {
+        return $this->hasMany(ProductScreenshot::class)->orderBy('position');
+    }
+
+    /**
      * The most recent reviewer decision, if any — powers the "told the
      * outcome" founder-facing note on `ProductResource` (see ADR-025).
      *

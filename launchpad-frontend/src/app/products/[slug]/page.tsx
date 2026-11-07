@@ -4,9 +4,11 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { VoteButton } from "@/components/vote-button";
 import { ShareButton } from "@/components/share-button";
-import { ImageIcon, PencilIcon } from "@/components/icons";
+import { ScreenshotCarousel } from "@/components/screenshot-carousel";
+import { TopicTag } from "@/components/topic-tag";
+import { PencilIcon } from "@/components/icons";
 import { getCurrentUser } from "@/lib/auth";
-import { getProductBySlug } from "@/lib/products";
+import { getProductBySlug, STATUS_LABELS } from "@/lib/products";
 
 /**
  * Comments aren't a built feature yet (see docs/02-features.md) — these are
@@ -29,12 +31,20 @@ const DUMMY_COMMENTS = [
 ];
 
 /**
- * Editing is only possible while a product is still a draft, sent back for
- * changes, or already launched (description/website only once launched —
- * see docs/02-features.md); every other status (pending review, approved,
- * scheduled) has no edit flow at all, so the button shouldn't be offered.
+ * Editing is possible from draft, changes-requested, pending review,
+ * approved, scheduled, or launched (see docs/02-features.md, ADR-035) —
+ * approved/scheduled and launched each have their own restrictions
+ * enforced server-side (ProductPolicy::update()); rejected/taken-down have
+ * no edit flow at all, so the button shouldn't be offered for those.
  */
-const EDITABLE_STATUSES = ["draft", "changes_requested", "launched"];
+const EDITABLE_STATUSES = [
+  "draft",
+  "changes_requested",
+  "pending_review",
+  "approved",
+  "scheduled",
+  "launched",
+];
 
 export default async function ProductPage({
   params,
@@ -70,26 +80,17 @@ export default async function ProductPage({
                   {product.name.charAt(0)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h1 className="font-display text-3xl tracking-tight">
-                      {product.name}
-                    </h1>
-                    {canEdit && (
-                      <Link
-                        href={`/dashboard/products/${product.slug}/edit`}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                        Edit
-                      </Link>
-                    )}
-                  </div>
+                  <h1 className="font-display text-3xl tracking-tight">
+                    {product.name}
+                  </h1>
                   <p className="mt-1 text-lg text-muted">{product.tagline}</p>
-                  <div className="mt-2 flex flex-wrap gap-x-3 text-sm text-muted">
-                    {product.topics.map((topic) => (
-                      <span key={topic}>{topic}</span>
-                    ))}
-                  </div>
+                  {product.topics.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {product.topics.map((topic) => (
+                        <TopicTag key={topic}>{topic}</TopicTag>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -97,10 +98,7 @@ export default async function ProductPage({
                 {product.description}
               </p>
 
-              <div className="mt-8 flex aspect-video w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-gradient-to-br from-gold-fill/10 to-foreground/5 text-muted">
-                <ImageIcon className="h-6 w-6" />
-                <span className="text-sm">Product screenshot</span>
-              </div>
+              <ScreenshotCarousel screenshots={product.screenshots} />
 
               <div id="comments" className="mt-16 scroll-mt-16 border-t border-hairline pt-10">
                 <h2 className="font-display text-xl">
@@ -131,13 +129,22 @@ export default async function ProductPage({
             {/* Right pane: actions */}
             <aside className="lg:sticky lg:top-8 lg:self-start">
               <div className="space-y-3 rounded-xl border border-hairline p-5">
-                <VoteButton
-                  slug={product.slug}
-                  votesCount={product.votesCount}
-                  votedByViewer={product.votedByViewer}
-                  disabled={isOwnProduct}
-                  variant="block"
-                />
+                {product.status === "launched" ? (
+                  <VoteButton
+                    slug={product.slug}
+                    votesCount={product.votesCount}
+                    votedByViewer={product.votedByViewer}
+                    disabled={isOwnProduct}
+                    variant="block"
+                  />
+                ) : (
+                  isOwnProduct && (
+                    <p className="rounded-lg border border-hairline px-4 py-3 text-center text-sm text-muted">
+                      {STATUS_LABELS[product.status] ?? product.status}
+                      <span className="block text-xs">Only you can see this</span>
+                    </p>
+                  )
+                )}
                 <a
                   href={product.websiteUrl}
                   target="_blank"
@@ -147,6 +154,15 @@ export default async function ProductPage({
                   Visit website
                 </a>
                 <ShareButton title={product.name} />
+                {canEdit && (
+                  <Link
+                    href={`/dashboard/products/${product.slug}/edit`}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-hairline px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                    Edit
+                  </Link>
+                )}
               </div>
             </aside>
           </div>

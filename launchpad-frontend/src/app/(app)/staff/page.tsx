@@ -1,5 +1,7 @@
 import { requireStaff } from "@/lib/auth";
 import { getReviewQueue } from "@/lib/products";
+import { ScreenshotCarousel } from "@/components/screenshot-carousel";
+import { TopicTag } from "@/components/topic-tag";
 import { ReviewActions } from "./review-actions";
 
 export default async function StaffPage() {
@@ -59,10 +61,16 @@ export default async function StaffPage() {
                 </p>
 
                 {product.topics.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-x-3 text-xs text-muted">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {product.topics.map((topic) => (
-                      <span key={topic}>{topic}</span>
+                      <TopicTag key={topic}>{topic}</TopicTag>
                     ))}
+                  </div>
+                )}
+
+                {product.screenshots.length > 0 && (
+                  <div className="max-w-md">
+                    <ScreenshotCarousel screenshots={product.screenshots} />
                   </div>
                 )}
 

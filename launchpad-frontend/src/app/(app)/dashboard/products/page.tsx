@@ -4,6 +4,21 @@ import { getMyProducts, STATUS_LABELS } from "@/lib/products";
 import { SubmitForReviewButton } from "../submit-for-review-button";
 import { ScheduleLaunchForm } from "./schedule-launch-form";
 
+/**
+ * Mirrors ProductPolicy::update()'s allow-list (see ADR-035) — a product
+ * name here links straight to its real detail page (`/products/[slug]`,
+ * not a second dashboard-only one — see ADR-034), which shows its own Edit
+ * button to the owner for exactly these statuses.
+ */
+const EDITABLE_STATUSES = [
+  "draft",
+  "changes_requested",
+  "pending_review",
+  "approved",
+  "scheduled",
+  "launched",
+];
+
 export default async function MyProductsPage() {
   await requireUser("/dashboard/products");
   const products = await getMyProducts();
@@ -35,9 +50,9 @@ export default async function MyProductsPage() {
       ) : (
         <div className="mt-6 divide-y divide-hairline">
           {products.map((product) => {
-            const canEdit =
+            const canEdit = EDITABLE_STATUSES.includes(product.status);
+            const canSubmit =
               product.status === "draft" || product.status === "changes_requested";
-            const canSubmit = canEdit;
             const canSchedule =
               product.status === "approved" || product.status === "scheduled";
             const showReviewNote =
@@ -53,7 +68,7 @@ export default async function MyProductsPage() {
 
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/dashboard/products/${product.slug}`}
+                      href={`/products/${product.slug}`}
                       className="font-medium transition-colors hover:text-gold"
                     >
                       {product.name}

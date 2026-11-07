@@ -9,13 +9,41 @@ use Illuminate\Auth\Access\Response;
 class ProductPolicy
 {
     /**
-     * A founder can only edit their own product, and not while it's
-     * `pending_review` — a reviewer could be looking at it mid-queue (see
-     * ADR-025).
+     * A founder can only edit their own product, and only from a status
+     * that actually has an edit flow (see docs/02-features.md, ADR-035):
+     * `draft`/`changes_requested`/`pending_review` (full edit, no status
+     * effect), `approved`/`scheduled` (full edit, but it sends the product
+     * back for review — see `ProductController::update()`), or `launched`
+     * (description/website only). Not `rejected`/`taken_down`, which are
+     * terminal.
      */
     public function update(User $user, Product $product): bool
     {
-        return $user->is($product->founder) && $product->status !== 'pending_review';
+        return $user->is($product->founder)
+            && in_array($product->status, ['draft', 'changes_requested', 'pending_review', 'approved', 'scheduled', 'launched'], true);
+    }
+
+    /**
+     * Gates the dedicated add/remove screenshot endpoints (ADR-036) — same
+     * founder-owned statuses as `update()` minus `launched`, where
+     * screenshots are locked outright rather than silently ignored (unlike
+     * `update()`, a dedicated screenshot endpoint should say so, not no-op).
+     */
+    public function manageScreenshots(User $user, Product $product): Response
+    {
+        if (! $user->is($product->founder)) {
+            return Response::deny('This is not your product.');
+        }
+
+        if ($product->status === 'launched') {
+            return Response::deny("Screenshots can't change once a product has launched.");
+        }
+
+        if (! in_array($product->status, ['draft', 'changes_requested', 'pending_review', 'approved', 'scheduled'], true)) {
+            return Response::deny("This product can't be edited right now.");
+        }
+
+        return Response::allow();
     }
 
     /**

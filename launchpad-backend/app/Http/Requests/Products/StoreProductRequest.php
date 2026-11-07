@@ -24,6 +24,8 @@ class StoreProductRequest extends FormRequest
             'logo' => ['sometimes', 'image', 'max:2048'],
             'topic_ids' => ['sometimes', 'array', 'max:3'],
             'topic_ids.*' => ['integer', 'exists:topics,id'],
+            'screenshots' => ['sometimes', 'array', 'max:3'],
+            'screenshots.*' => ['image', 'max:4096'],
         ];
     }
 }

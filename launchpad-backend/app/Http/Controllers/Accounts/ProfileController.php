@@ -50,7 +50,7 @@ class ProfileController extends Controller
 
         $products = $user->launchedProducts()
             ->withCount(['activeVotes as votes_count'])
-            ->with(['topics', 'founder'])
+            ->with(['topics', 'founder', 'screenshots'])
             ->when($viewer, fn ($query) => $query->with([
                 'activeVotes' => fn ($q) => $q->where('user_id', $viewer->id),
             ]))

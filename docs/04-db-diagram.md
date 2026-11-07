@@ -261,6 +261,9 @@ Ref: users.id < audit_logs.actor_id
   review/audit row is never edited once written. `audit_logs.target_id` has
   no foreign key — it's a loose polymorphic pair with `target_type`, same
   reasoning as `product_reports`/`comment_reports` below.
+- `product_screenshots` is implemented as of ADR-033 — same `created_at`-only
+  shape as `product_reviews`, since a screenshot row is replaced wholesale
+  (see `ProductController::replaceScreenshots()`), never edited in place.
 - `product_reports` and `comment_reports` are separate tables instead of one
   polymorphic `reports` table — keeps foreign keys real instead of a loose
   type+id pair. Same reasoning applies to `user_follows`/`topic_follows`: kept as two
