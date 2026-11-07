@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CommentIcon } from "@/components/icons";
+import { TopicTag } from "@/components/topic-tag";
 import { VoteButton } from "@/components/vote-button";
 import type { Product } from "@/types";
 
@@ -50,6 +51,13 @@ export function ProductCard({
           <p className="mt-0.5 truncate text-sm text-muted">
             {product.tagline}
           </p>
+          {product.topics.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {product.topics.map((topic) => (
+                <TopicTag key={topic}>{topic}</TopicTag>
+              ))}
+            </div>
+          )}
         </div>
       </Link>
 

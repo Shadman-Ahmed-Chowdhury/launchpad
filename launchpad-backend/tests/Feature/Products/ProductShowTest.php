@@ -17,6 +17,15 @@ it('shows a launched product by slug with its topics and vote count', function (
         ->assertJsonPath('data.topics.0', 'Productivity');
 });
 
+it('includes the founder, so the frontend can tell the owner apart from any other viewer', function () {
+    $founder = User::factory()->create();
+    $product = Product::factory()->launched()->create(['slug' => 'flowcraft', 'founder_id' => $founder->id]);
+
+    $this->getJson('/api/products/flowcraft')
+        ->assertOk()
+        ->assertJsonPath('data.founder.id', $founder->id);
+});
+
 it('404s for a draft product', function () {
     Product::factory()->create(['slug' => 'draft-product', 'status' => 'draft']);
 

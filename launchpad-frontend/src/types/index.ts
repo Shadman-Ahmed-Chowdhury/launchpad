@@ -47,6 +47,11 @@ export interface ProductFounder {
   handle: string;
 }
 
+export interface ProductScreenshot {
+  id: number;
+  url: string;
+}
+
 /**
  * The reviewer's most recent decision on a product — only present for the
  * founder or staff (see ProductResource on the backend).
@@ -69,6 +74,7 @@ export interface Product {
   description: string;
   logo: string | null;
   topics: string[];
+  screenshots: ProductScreenshot[];
   websiteUrl: string;
   status: ProductStatus;
   votesCount: number;

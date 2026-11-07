@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Products;
 
+use App\Models\ProductScreenshot;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,10 @@ class ProductResource extends JsonResource
             'description' => $this->description,
             'logo' => $this->logoUrl(),
             'topics' => $this->whenLoaded('topics', fn () => $this->topics->pluck('name')->values()),
+            'screenshots' => $this->whenLoaded('screenshots', fn () => $this->screenshots->map(fn (ProductScreenshot $screenshot) => [
+                'id' => $screenshot->id,
+                'url' => $screenshot->url(),
+            ])->values()),
             'website_url' => $this->website_url,
             'status' => $this->status,
             'votes_count' => $this->votes_count,

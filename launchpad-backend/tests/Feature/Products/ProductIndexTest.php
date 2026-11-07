@@ -26,3 +26,11 @@ it('includes pagination metadata', function () {
         ->assertOk()
         ->assertJsonStructure(['data', 'links', 'meta']);
 });
+
+it('includes the founder on each product, so the frontend can tell an owner apart from any other viewer', function () {
+    $product = Product::factory()->launched()->create();
+
+    $this->getJson('/api/products')
+        ->assertOk()
+        ->assertJsonPath('data.0.founder.id', $product->founder_id);
+});

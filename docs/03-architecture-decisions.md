@@ -554,3 +554,127 @@ bottom. Don't delete old entries — mark them superseded instead.
   configured, while local development gets a working upload for free
   instead of a hard dependency on AWS credentials just to click through the
   app.
+
+## ADR-033: Screenshots table built; editing an approved/scheduled product resubmits it for review
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** Two related product-page fixes:
+  - `product_screenshots` (already drafted in `docs/04-db-diagram.md` but
+    unbuilt, same gap ADR-025 closed for `product_reviews`/`audit_logs`) is
+    now a real table/model. `StoreProductRequest`/`UpdateProductRequest`
+    accept `screenshots` (array, max 3, image, max 4096kb). Each save
+    **replaces the whole set** — `ProductController::replaceScreenshots()`
+    deletes the product's existing rows and re-creates them in upload order
+    — there's no per-image add/remove/reorder endpoint, matching the brief's
+    "up to three screenshots" rather than a general gallery manager.
+  - `ProductPolicy::update()` changes from "anything except `pending_review`"
+    to an explicit allow-list: `draft`/`changes_requested` (unrestricted),
+    `approved`/`scheduled` (unrestricted, but see below),
+    `launched` (`description`/`website_url` only, unchanged from ADR-024).
+    This closes a real gap: `rejected`/`taken_down` were previously editable
+    too, contradicting `docs/02-features.md`'s "rejected is final."
+  - Editing an `approved` or `scheduled` product is allowed to touch
+    anything, but `ProductController::update()` then flips `status` back to
+    `pending_review`, stamps `submitted_at` (so it reorders into the queue
+    correctly), and clears `launch_date` — a reviewer already signed off on
+    the content that just changed, and a `scheduled` product keeping its
+    launch day while unreviewed content sits behind it would let a founder
+    dodge review entirely by scheduling first, then editing.
+- **Why:** Founder feedback: there was no way to fix an approved/scheduled
+  product's content short of it launching as-is, and no screenshot upload
+  existed at all despite being in the original brief and DB diagram.
+  Treating `scheduled` the same as `approved` (not just `approved` alone)
+  keeps the review gate from having a hole in it.
+
+## ADR-034: One product detail page, not two — the dashboard product list links to `/products/[slug]`
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** `/dashboard/products/[slug]` (a second, plainer product
+  detail view — name/tagline/description/topics/votes/edit link, no
+  screenshots) is removed. The dashboard product list
+  (`/dashboard/products`) now links each product's name straight to its
+  real page, `/products/[slug]` — already viewable by its own founder at
+  any status (`ProductController::show()`, ADR-024/029) — and
+  `updateProductAction` redirects there after a save instead of to the
+  now-deleted page. `/products/[slug]` gains two small adjustments so it
+  reads correctly as both the public page and the founder's own preview:
+  the vote button only renders once `launched` (voting on a draft makes no
+  sense and `ProductPolicy::vote()` would just reject it); everywhere else
+  it's replaced, for the owner only, with a small "Only you can see this"
+  status pill (reusing the `STATUS_LABELS` map `src/lib/products.ts`
+  already exported).
+- **Why:** Founder feedback: two differently-designed pages for the same
+  product was confusing, and the plainer one didn't have the new
+  screenshots/topic-tags/Edit-button work from ADR-033. Submitting for
+  review and picking/changing a launch day stay on the dashboard list
+  (`SubmitForReviewButton`/`ScheduleLaunchForm` already live there, inline
+  per row) — those are founder-workflow actions with no public-facing
+  equivalent, unlike viewing the product itself.
+
+## ADR-035: A founder can edit a product while it's pending review (amends ADR-025/ADR-033)
+
+- **Date:** 2026-11-06
+- **Status:** Accepted
+- **Decision:** `ProductPolicy::update()` adds `pending_review` to its
+  allow-list. It behaves like `draft`/`changes_requested` — anything may
+  change, with no status effect (`ProductController::update()` needed no
+  change: `pending_review` already fell through its `$isLaunched`/
+  `$backToReview` branches untouched). The product stays in the reviewer
+  queue at its original `submitted_at` position.
+- **Why:** Founder feedback: ADR-025 blocked editing during review so "a
+  reviewer never reviews a moving target," but in practice a founder
+  spotting a typo or broken link had no way to fix it without waiting for a
+  decision first. Leaving `submitted_at` untouched (unlike the
+  approved/scheduled → pending_review resubmit in ADR-033, which does bump
+  it) keeps the queue's "oldest first" order fair to other founders — the
+  product isn't re-entering the queue, just being corrected in place.
+
+## ADR-036: Screenshots become their own add-one/remove-one endpoints (supersedes the replace-wholesale part of ADR-033)
+
+- **Date:** 2026-11-07
+- **Status:** Accepted
+- **Decision:** `PATCH /api/products/{slug}` no longer touches screenshots
+  at all (`UpdateProductRequest` drops the field, `ProductController::
+  update()` no longer calls anything screenshot-related). Two new endpoints
+  take over, gated by a new `ProductPolicy::manageScreenshots()` ability
+  (same founder-owned statuses as `update()` minus `launched`, where it
+  denies outright instead of silently no-op'ing — a dedicated endpoint
+  succeeding with no effect would read as a bug to the frontend):
+  - `POST /api/products/{slug}/screenshots` (`addScreenshots()`,
+    `AddScreenshotsRequest`) appends 1+ images, positioned after whatever
+    already exists. Its `after()` hook rejects anything that would push the
+    total past 3, counting the product's existing screenshots the same way
+    `ScheduleProductRequest` counts taken launch slots.
+  - `DELETE /api/products/{slug}/screenshots/{screenshot}`
+    (`destroyScreenshot()`) removes one and re-numbers the rest so
+    `position` stays contiguous (0..n-1) for the carousel.
+  - Both call a new shared `resubmitIfReviewed()` — the same
+    approved/scheduled → pending_review transition `update()` already had,
+    now a private helper used by all three endpoints instead of duplicated.
+  - `store()` (product creation) is unaffected — screenshots still arrive
+    bundled with the rest of the create payload, since there's no product
+    id yet to attach them to individually.
+  - `ProductResource`'s `screenshots` entries become `{id, url}` objects
+    instead of bare URL strings — the frontend needs the id to target the
+    delete endpoint.
+  Frontend: the dashboard edit form's screenshot block becomes
+  `ScreenshotManager` (`src/components/screenshot-manager.tsx`) for an
+  existing product — each thumbnail has its own remove (×) button that
+  calls `removeScreenshotAction` immediately via its own `useActionState`
+  (one instance per thumbnail), and an "Add screenshot" control (shown
+  while under 3) calls `addScreenshotAction` immediately on file selection
+  — neither is bundled into the form's "Save changes". Clicking a thumbnail
+  (there, on the product page's carousel, and in the reviewer queue) opens
+  it full-size in a new shared `ImageLightbox`. The create-product form has
+  no product id yet to call these endpoints against, so it keeps a
+  local-only staging picker (`StagedScreenshotsPicker`) with the same
+  view/remove-before-save interaction, submitted with the rest of the form.
+- **Why:** Founder feedback: the replace-the-whole-set model from ADR-033
+  meant fixing one bad screenshot required re-selecting every file again,
+  and there was no way to just look at one full-size. Per-image endpoints
+  make "remove this one, then add a replacement" an actual two-click
+  workflow instead of a full re-upload, and match how the rest of the
+  product's sub-resources (topics, votes) already have their own
+  endpoints rather than being folded into `update()`.

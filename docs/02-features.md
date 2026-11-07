@@ -32,14 +32,19 @@ Keep this file in sync with scope — update it whenever a feature is added, dro
 
 ## Founder (member who submitted a product)
 
-- Can submit a product: name, one-line pitch, description, logo, screenshots, website link, up to 3 topics
+- Can submit a product: name, one-line pitch, description, logo, up to 3 screenshots,
+  website link, up to 3 topics
 - Can save a submission as draft and finish later
 - Submits a draft into the review queue when it's ready; can resubmit after changes are requested (rejected is final — no resubmit)
-- Can't edit a product while it's in the review queue (pending review)
+- Can edit a product while it's in the review queue (pending review) — a reviewer
+  may already be looking at it, but a founder can still fix it in the meantime
 - Sees the outcome and the reviewer's reason on their dashboard (email/in-site notifications aren't built yet — see ADR-025)
 - Gets notified when the product is approved, rejected, or sent back for changes
 - Can pick a launch day after approval, and change it until launch (limited slots per day)
+- Can edit anything while `approved` or `scheduled` — doing so sends it back to the
+  reviewer queue (and clears the picked launch day, since it needs re-approval first)
 - Can edit description and links after launch (nothing else)
+- Can't edit a rejected or taken-down product (terminal)
 - Gets notified the day before launch, and when the product goes live
 - Gets notified when someone comments on their product
 - Has a dashboard for their own product: views, votes over the day, traffic sources, rank

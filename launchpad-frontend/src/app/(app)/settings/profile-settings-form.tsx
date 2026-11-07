@@ -15,10 +15,12 @@ export function ProfileSettingsForm({ user }: { user: User }) {
     user.links.map(({ label, url }) => ({ label, url })),
   );
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl);
+  const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
 
   function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setAvatarPreview(file ? URL.createObjectURL(file) : user.avatarUrl);
+    setAvatarFileName(file ? file.name : null);
   }
 
   function updateLink(index: number, field: "label" | "url", value: string) {
@@ -56,7 +58,9 @@ export function ProfileSettingsForm({ user }: { user: User }) {
             onChange={handleAvatarChange}
             className="hidden"
           />
-          <p className="mt-1 text-xs text-muted">JPG or PNG, up to 2MB.</p>
+          <p className="mt-1 text-xs text-muted">
+            {avatarFileName ?? "JPG or PNG, up to 2MB."}
+          </p>
           {state?.errors?.avatar && (
             <p className="mt-1 text-sm text-danger">{state.errors.avatar[0]}</p>
           )}

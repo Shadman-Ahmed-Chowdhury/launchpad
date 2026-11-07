@@ -4,7 +4,14 @@ import { getMyProductBySlug, getTopics } from "@/lib/products";
 import { ProductForm } from "../../product-form";
 import { LaunchedProductForm } from "../../../launched-product-form";
 
-const EDITABLE_STATUSES = ["draft", "changes_requested", "launched"];
+const EDITABLE_STATUSES = [
+  "draft",
+  "changes_requested",
+  "pending_review",
+  "approved",
+  "scheduled",
+  "launched",
+];
 
 export default async function EditProductPage({
   params,
@@ -46,6 +53,7 @@ export default async function EditProductPage({
   const topicIds = topics
     .filter((topic) => product.topics.includes(topic.name))
     .map((topic) => topic.id);
+  const sendsBackToReview = product.status === "approved" || product.status === "scheduled";
 
   return (
     <div className="mx-auto w-full max-w-[80%] px-6 py-16">
@@ -53,7 +61,11 @@ export default async function EditProductPage({
       <p className="mt-2 text-muted">
         {product.status === "changes_requested"
           ? "A reviewer sent this back for changes — update it and resubmit."
-          : "Still a draft — nothing is public yet."}
+          : product.status === "pending_review"
+            ? "This is in the review queue — you can still fix it while a reviewer looks at it."
+            : sendsBackToReview
+              ? "It's already been reviewed — saving changes sends it back to the reviewer queue."
+              : "Still a draft — nothing is public yet."}
       </p>
 
       {product.status === "changes_requested" && product.latestReview?.notes && (
@@ -71,6 +83,7 @@ export default async function EditProductPage({
           description: product.description,
           websiteUrl: product.websiteUrl,
           topicIds,
+          screenshots: product.screenshots,
         }}
       />
     </div>

@@ -52,6 +52,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
     Route::post('/products/{slug}/submit', [ProductController::class, 'submit']);
     Route::post('/products/{slug}/schedule', [ProductController::class, 'scheduleLaunch']);
+    Route::post('/products/{slug}/screenshots', [ProductController::class, 'addScreenshots']);
+    Route::delete('/products/{slug}/screenshots/{screenshot}', [ProductController::class, 'destroyScreenshot']);
     Route::post('/products/{slug}/votes', [VoteController::class, 'store'])->middleware('throttle:voting');
     Route::delete('/products/{slug}/votes', [VoteController::class, 'destroy'])->middleware('throttle:voting');
 
